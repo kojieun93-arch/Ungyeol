@@ -12,14 +12,9 @@
    기준값: 연주 · 월주는 60갑자 · 절기 월(오호둔), 일주는 60일 순환(기준일 1949-10-01 甲子 — 2000-01-01 戊午 · 1900-01-01 甲戌와 일치),
           시주는 오서둔 + 시계 시각(진태양시 보정 없음). 절기 경계 · 서머타임 · 자시를 피한 날짜로 골랐어요.
    ────────────────────────────────────────────────────────── */
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
-const CASES = [
-  { name: "양력 1990-05-15 12:00 남 (공식 예시)", body: { calendar: "solar", leap: null, birth: { y: 1990, m: 5, d: 15 }, time: { h: 12, m: 0 }, gender: "male" }, expect: { year: "庚午", month: "辛巳", day: "庚辰", hour: "壬午" } },
-  { name: "양력 1996-05-17 08:00 여", body: { calendar: "solar", leap: null, birth: { y: 1996, m: 5, d: 17 }, time: { h: 8, m: 0 }, gender: "female" }, expect: { year: "丙子", month: "癸巳", day: "甲寅", hour: "戊辰" } },
-  { name: "양력 1985-10-20 시각 모름 여", body: { calendar: "solar", leap: null, birth: { y: 1985, m: 10, d: 20 }, time: null, gender: "female" }, expect: { year: "乙丑", month: "丙戌", day: "壬辰", hour: null } },
-  { name: "음력 2024-01-01 평달 10:00 여 (양력 2024-02-10)", body: { calendar: "lunar", leap: false, birth: { y: 2024, m: 1, d: 1 }, time: { h: 10, m: 0 }, gender: "female" }, expect: { year: "甲辰", month: "丙寅", day: "甲辰", hour: "己巳" } },
-];
+const CASES = JSON.parse(readFileSync(new URL("../src/content/manse-check-cases.json", import.meta.url), "utf8")).cases; // 화면(/check/manse)과 같은 사례
 
 const url = process.env.UNGYEOL_URL?.replace(/\/+$/, "");
 const token = process.env.MANSE_CHECK_TOKEN;

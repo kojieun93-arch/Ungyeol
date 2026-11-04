@@ -169,7 +169,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * 공식 문서: 실패(4xx · 5xx) 응답은 과금되지 않음
  * X-Idempotency-Key: 공식 문서의 멱등성 절(같은 키 · 같은 본문은 24시간 안 재과금 없음). 만세력 적용 여부는 실제 호출로 확인 필요
  */
-export async function fetchHrumManse(v: ManseRequest, cfg: Extract<ManseConfig, { provider: "hrum" }>, fetchImpl: typeof fetch = fetch, retryDelayMs = 1000): Promise<HrumCalculation> {
+/** 과금 판단에 쓰는 호출 정보 — 공식 문서: 성공(200)만 과금 · 멱등 재응답은 Idempotent-Replayed: true (재과금 없음) */
+export type HrumCallMeta = { attempts: number; replayed: boolean | null };
+
+export async function fetchHrumManse(v: ManseRequest, cfg: Extract<ManseConfig, { provider: "hrum" }>, fetchImpl: typeof fetch = fetch, retryDelayMs = 1000): Promise<HrumCalculation & { meta: HrumCallMeta }> {
   const body = JSON.stringify(buildHrumBody(v));
   const idem = createHash("sha256").update(body).digest("hex").slice(0, 64);
   for (let attempt = 0; ; attempt++) {
@@ -196,7 +199,10 @@ export async function fetchHrumManse(v: ManseRequest, cfg: Extract<ManseConfig, 
     } catch {
       json = null; // 403 보안 규칙 차단은 HTML 본문
     }
-    if (res.ok) return parseHrumResponse(json, v.time !== null);
+    if (res.ok) {
+      const rp = res.headers.get("idempotent-replayed");
+      return { ...parseHrumResponse(json, v.time !== null), meta: { attempts: attempt + 1, replayed: rp === null ? null : rp.toLowerCase() === "true" } };
+    }
     if (attempt === 0 && RETRYABLE.has(res.status)) {
       await sleep(retryDelayMs);
       continue;

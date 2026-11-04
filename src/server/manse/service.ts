@@ -13,10 +13,22 @@ import { boundaryWarnings, type BoundaryWarning, type ManseRequest } from "./inp
    같은 입력은 10분 메모리 캐시 (호출당 과금). 키는 입력의 SHA-256
    ────────────────────────────────────────────────────────── */
 
+/** 크레딧 사용 추정 — 실제 차감액은 HRUM 콘솔(사용량 · 결제)에서 확인 */
+export type ManseBilling = {
+  /** 이번 요청에서 HRUM 을 실제로 불렀는지 (false = 운결 서버 캐시) */
+  upstreamCalled: boolean;
+  /** HRUM 이 멱등 재응답이라고 알려 왔는지 (null = 헤더 없음) */
+  replayed: boolean | null;
+  /** 공식 요금(성공 1건 ₩50) 기준 추정액 */
+  estimatedChargeKRW: 0 | 50;
+  basis: string;
+};
+
 export type ManseServiceResult = {
   status: "calculated" | "unverified";
   source: "hrum";
   calculation: HrumCalculation;
+  billing: ManseBilling;
   warnings: { provider: string[]; ungyeol: BoundaryWarning[] };
   verification: { mappingVerified: boolean; checks: HrumCalculation["checks"] };
 };
@@ -30,9 +42,14 @@ export async function calculateManse(v: ManseRequest, cfg: ManseConfig = readMan
   const k = keyOf(v);
   const hit = cache.get(k);
   let calc: HrumCalculation;
+  let billing: ManseBilling = { upstreamCalled: false, replayed: null, estimatedChargeKRW: 0, basis: "운결 서버 캐시 (HRUM 호출 없음)" };
   if (hit && Date.now() - hit.at < TTL) calc = hit.calc;
   else {
-    calc = await fetchHrumManse(v, cfg, fetchImpl);
+    const { meta, ...fresh } = await fetchHrumManse(v, cfg, fetchImpl);
+    calc = fresh;
+    billing = meta.replayed
+      ? { upstreamCalled: true, replayed: true, estimatedChargeKRW: 0, basis: "HRUM 멱등 재응답 (재과금 없음)" }
+      : { upstreamCalled: true, replayed: meta.replayed, estimatedChargeKRW: 50, basis: "공식 요금 성공 1건 ₩50 (추정)" };
     cache.set(k, { at: Date.now(), calc });
     if (cache.size > 500) cache.delete(cache.keys().next().value as string);
   }
@@ -42,6 +59,7 @@ export async function calculateManse(v: ManseRequest, cfg: ManseConfig = readMan
     status: cfg.mappingVerified && consistent ? "calculated" : "unverified",
     source: "hrum",
     calculation: calc,
+    billing,
     warnings: { provider: calc.providerWarnings, ungyeol: boundaryWarnings(v) },
     verification: { mappingVerified: cfg.mappingVerified, checks: calc.checks },
   };
