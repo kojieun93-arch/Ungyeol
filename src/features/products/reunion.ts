@@ -335,7 +335,7 @@ function ch07(s: ProductSource): Part {
   const rel = relationTo(b.dm.element, yg.stem.element).name;
   const w = monthWindow(br.y, br.m);
   const months = monthsBetween(br, s.now);
-  const elapsed = months >= 0 ? `약 ${months}개월 전 (달 단위 계산)` : "";
+  const elapsed = months >= 0 ? `약 ${months}개월 전 (${s.reportId === "sample" ? `예시 기준일 ${s.now.getFullYear()}년 ${s.now.getMonth() + 1}월 · ` : ""}달 단위 계산)` : "";
   return {
     summary: `헤어진 ${br.y}년은 ${ganjiText(yg)}년이에요. 나의 일간${b.sampleTag}에게는 ‘${LOVE_GOD[rel].name}(${rel})’이 들어온 해로 읽어요.`,
     dataSlot: demoSlot(s, "원국", " 연 · 월 간지는 달력으로 정해진 값이고, 나와의 관계 해석은 샘플 원국 기준이에요."),

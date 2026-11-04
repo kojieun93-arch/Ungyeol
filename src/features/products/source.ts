@@ -26,6 +26,13 @@ export type ProductSource = {
   now: Date;
 };
 
+/**
+ * 공개 샘플의 기준일 — 고정값
+ * 샘플 페이지는 빌드 때 HTML 로 미리 만들어지므로, '오늘'로 계산하면 방문 시점에 브라우저 계산과 달라져
+ * 하이드레이션 불일치가 생김. 예시 상황이라 기준일을 고정하고 화면에 '예시 기준일'로 표시
+ */
+export const SAMPLE_NOW = new Date(2026, 10, 1);
+
 /** 공개 샘플의 예시 상황 — 실제 사람이 아님 */
 export const SAMPLE_CASE = {
   mbti: "INFP",
@@ -34,7 +41,7 @@ export const SAMPLE_CASE = {
   concern: "unsure",
 };
 
-export function sampleSource(productId: ProductId, now = new Date()): ProductSource {
+export function sampleSource(productId: ProductId, now = SAMPLE_NOW): ProductSource {
   const relational = productId === "reunion" || productId === "compat";
   return {
     reportId: "sample",

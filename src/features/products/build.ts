@@ -32,8 +32,8 @@ export function buildProductReport(id: ProductId, s: ProductSource, src: Product
   return { product, reportId: s.reportId, payload: s.payload, basis: basisOf(id, s), chapters, source: src };
 }
 
-export function buildProductSample(id: ProductId, now = new Date()): ProductReport {
-  return buildProductReport(id, sampleSource(id, now));
+export function buildProductSample(id: ProductId): ProductReport {
+  return buildProductReport(id, sampleSource(id));
 }
 
 /** 채팅의 무료 요약 카드 줄 */

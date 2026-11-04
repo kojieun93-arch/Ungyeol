@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "dev:mobile": "next dev -H 0.0.0.0",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm run build"
   },
   "dependencies": {
     "html-to-image": "^1.11.13",
@@ -23,5 +24,8 @@
     "@types/react-dom": "^19",
     "tailwindcss": "^4.1.0",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.18.0"
   }
 }
