@@ -6,3 +6,6 @@ out
 *.tsbuildinfo
 next-env.d.ts
 .DS_Store
+
+# 만세력 검증 결과 (로컬)
+manse-check-result.json

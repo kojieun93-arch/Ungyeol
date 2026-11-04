@@ -6,7 +6,7 @@ import type { ManseInput } from "@/features/saju/types";
    - 받는 값: 양력/음력 · 윤달 · 생년월일 · 출생 시각(모르면 null) · 성별 · 시간대
    - 이름 · MBTI · 상대방 정보처럼 계산에 필요 없는 값은 받지 않음 (개인정보 최소 수집)
    - 시간대: 지금은 대한민국 표준시(Asia/Seoul)만. 해외 출생은 지원 전
-   - 경고는 '운결 쪽에서 미리 알 수 있는 주의점'일 뿐, 계산 엔진의 처리 방식을 추측하지 않음
+   - 경고는 '운결 쪽에서 미리 알 수 있는 주의점'. 계산 엔진의 처리 방식은 공식 문서에 적힌 것만 안내
    ────────────────────────────────────────────────────────── */
 
 export const SUPPORTED_TIMEZONES = ["Asia/Seoul"] as const;
@@ -44,6 +44,7 @@ export function validateManseRequest(raw: unknown, now = new Date()): { ok: true
   else if (y < MIN_BIRTH_YEAR || y > now.getFullYear()) err("OUT_OF_RANGE", "birth.y", `${MIN_BIRTH_YEAR}년부터 ${now.getFullYear()}년 사이만 계산해요.`);
   else if (m < 1 || m > 12) err("INVALID_DATE", "birth.m", "월은 1~12 사이예요.");
   else if (calendar === "lunar" ? d < 1 || d > 30 : d < 1 || d > daysInSolarMonth(y, m)) err("INVALID_DATE", "birth.d", "없는 날짜예요.");
+  else if (calendar === "lunar" && (y > 2050 || (y === 2050 && (m > 11 || (m === 11 && d > 30))))) err("OUT_OF_RANGE", "birth", "음력은 2050년 11월 30일까지만 바꿀 수 있어요.");
   else if (calendar === "solar" && Date.UTC(y, m - 1, d) > Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) err("FUTURE_DATE", "birth", "오늘 이후의 날짜는 계산하지 않아요.");
 
   let time: ManseInput["time"] = null;
@@ -62,7 +63,7 @@ export function validateManseRequest(raw: unknown, now = new Date()): { ok: true
   return { ok: true, value: { calendar: calendar as "solar" | "lunar", leap, birth: { y: y as number, m: m as number, d: d as number }, time, gender: b.gender as "female" | "male", timezone: tz as ManseTimezone } };
 }
 
-export type BoundaryWarning = { code: "TIME_UNKNOWN" | "NEAR_SOLAR_TERM" | "NEAR_IPCHUN" | "KOREA_TIME_CHANGES" | "ZASI_BOUNDARY" | "LUNAR_CONVERTED_BY_PROVIDER"; message: string };
+export type BoundaryWarning = { code: "TIME_UNKNOWN" | "NEAR_SOLAR_TERM" | "NEAR_IPCHUN" | "KOREA_DST" | "KOREA_STANDARD_TIME_CHANGE" | "ZASI_BOUNDARY" | "LUNAR_CONVERTED_BY_PROVIDER"; message: string };
 
 /**
  * 결과를 읽을 때 주의할 점 (계산 방식에 대한 단정 없음)
@@ -73,7 +74,7 @@ export type BoundaryWarning = { code: "TIME_UNKNOWN" | "NEAR_SOLAR_TERM" | "NEAR
 export function boundaryWarnings(v: ManseRequest): BoundaryWarning[] {
   const w: BoundaryWarning[] = [];
   if (!v.time) w.push({ code: "TIME_UNKNOWN", message: "출생 시각을 몰라 시주는 비워 두고 계산해요." });
-  if (v.calendar === "lunar") w.push({ code: "LUNAR_CONVERTED_BY_PROVIDER", message: "음력 생일은 계산 엔진이 양력으로 바꿔 계산해요." });
+  if (v.calendar === "lunar") w.push({ code: "LUNAR_CONVERTED_BY_PROVIDER", message: "음력 생일은 계산 엔진이 한국천문연구원 기준으로 양력으로 바꿔 계산해요." });
   else {
     const t = MONTH_TERMS[v.birth.m - 1];
     if (Math.abs(v.birth.d - t.day) <= 1) {
@@ -81,9 +82,14 @@ export function boundaryWarnings(v: ManseRequest): BoundaryWarning[] {
       if (v.birth.m === 2) w.push({ code: "NEAR_IPCHUN", message: "입춘 무렵이라 연주도 출생 시각에 따라 달라질 수 있어요." });
     }
   }
+  // 공식 문서: 1948–51 · 1955–60 · 1987–88 서머타임 기간 출생은 HRUM 이 1시간을 빼서 계산 (timezone 이 서울일 때)
   const y = v.birth.y;
-  if ((y >= 1908 && y <= 1911) || (y >= 1948 && y <= 1961) || (y >= 1987 && y <= 1988))
-    w.push({ code: "KOREA_TIME_CHANGES", message: "대한민국 표준시나 서머타임이 바뀌던 시기예요. 출생 시각 보정 방식을 꼭 확인해야 해요." });
-  if (v.time && (v.time.h === 23 || v.time.h === 0)) w.push({ code: "ZASI_BOUNDARY", message: "자시(23시~01시) 출생은 자시를 나누는 방식에 따라 일주가 달라질 수 있어요." });
+  if (v.time && ((y >= 1948 && y <= 1951) || (y >= 1955 && y <= 1960) || (y >= 1987 && y <= 1988)))
+    w.push({ code: "KOREA_DST", message: "서머타임 시행 시기 출생이라, 계산 엔진이 출생 시각에서 1시간을 빼서 계산해요. 기록된 시각이 서머타임 기준인지 확인해 주세요." });
+  // 문서에 따로 설명이 없는 예전 표준시(UTC+8:30) 시기는 주의 안내만
+  if (v.time && ((y >= 1908 && y <= 1911) || (y >= 1954 && y <= 1961)))
+    w.push({ code: "KOREA_STANDARD_TIME_CHANGE", message: "대한민국 표준시가 지금과 달랐던 시기예요. 출생 시각 해석에 주의가 필요해요." });
+  // zaSiRule 을 보내지 않음 → 공식 기본값 traditional (23시 이후 출생은 다음 날 일주)
+  if (v.time && v.time.h === 23) w.push({ code: "ZASI_BOUNDARY", message: "23시대 출생은 기본 규칙(전통 자시)에 따라 다음 날 일주로 계산해요. 야자시 규칙을 쓰면 일주가 달라질 수 있어요." });
   return w;
 }

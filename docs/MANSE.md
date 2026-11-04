@@ -1,67 +1,71 @@
-# 만세력 연결 구조 (PHASE 6 — 연결 준비 상태)
+# 만세력 연결 (PHASE 6-2 — 공식 명세 반영 · 실제 호출 검증 대기)
 
-> 현재 상태: **실제 계산은 연결되지 않았어요.** 화면(채팅 · 결과 카드 · 리포트)은 모두 고정 샘플 사주(운결 데모 사주, 일간 乙木)를 써요.
+> 현재 화면: **샘플 사주(운결 데모 사주, 일간 乙木)** 그대로예요. 실제 호출 검증과 기준 만세력 대조가 끝나기 전에는 바꾸지 않아요.
 
-## 확인한 것 · 못 한 것
+## 근거 문서 (2026-11-05 확인)
+- 공식 문서 https://hrum.ai/docs.html (만세력 API 절) · 시작 가이드 https://hrum.ai/getting-started.html
+- 문서에 없거나 이번에 읽은 범위에서 확인되지 않은 것: 일간 자리의 `stemSipsin` 표기, `lunarInput` · `trueSolarTime` · `warnings` 의 세부 필드, 공통 오류표 전체 → **추측해서 쓰지 않음**
 
-| 항목 | 상태 |
-|---|---|
-| HRUM 공식 문서 `hrum.ai/docs.html` | **직접 확인 못 함** (개발 세션에서 사이트 접근 차단) |
-| 요청 · 응답 형식 | HRUM 운영사(플로트 주식회사)가 공개한 예제에서만 확인: [hrum-manseryeok-example](https://github.com/float1122/hrum-manseryeok-example), [hrum-saju-api-examples](https://github.com/float1122/hrum-saju-api-examples) |
-| 실제 API 호출 | 안 함 (키 없음). 단위 테스트는 가짜 응답으로만 |
+## 요청 (운결 → HRUM)
+`POST https://api.hrum.ai/api/v1/partners/v1/manseryeok` · 헤더 `X-Partner-Api-Key` · `Content-Type: application/json` · `User-Agent: ungyeol/0.2` · `X-Idempotency-Key`(본문 해시)
 
-예제에서 확인한 내용 (공식 문서로 다시 확인 필요)
-- `POST {base}/manseryeok`, 헤더 `X-Partner-Api-Key: <키>` · `Content-Type: application/json` · `User-Agent: 앱이름/버전`
-- 본문: `year` `month` `day` (필수) · `hour` `minute` (모르면 생략) · `timezone` (필수, 예 `Asia/Seoul`) · `gender` (필수) · `calendar: "lunar"` · `isLeapMonth`
-- 응답: `{ success: true, data: { wonkuk: { year, month, day, hour } } }`, 기둥마다 `stem` `branch` `stemHanja` `branchHanja` `ohaeng` `stemSipsin` `branchSipsin`, 시각 미상이면 `wonkuk.hour: null` · `birthHour.known: false`
-- 오류: `{ success: false, statusCode, code?, message, timestamp }`, 예: `INVALID_LUNAR_DATE` `INVALID_LOCATION` `INSUFFICIENT_BALANCE` `RATE_LIMIT_EXCEEDED` `SERVICE_DEGRADED`
-- 과금: 성공 요청마다. 같은 입력은 캐시 권장
-
-## 구조
-
-```
-브라우저 (채팅 · 리포트)  ── 지금: MockManseProvider (샘플, 입력 무시)
-        │  (다음 단계: 매핑 확인 후 fetch("/api/manse"))
-        ▼
-/api/manse  (src/app/api/manse/route.ts — Node 런타임, 캐시 금지)
-  └ src/server/manse/handler.ts   같은 출처 · 2KB 제한 · IP당 분당 제한 · JSON · 입력 검증
-      └ service.ts                설정 확인 · 10분 메모리 캐시(입력 해시) · status 결정
-          └ hrum.ts               HRUM 호출(타임아웃) · 응답 검증 · ManseResult 변환 · 오류 매핑
-```
-
-- 키는 `HRUM_API_KEY`(서버 환경 변수)로만. 주소도 `HRUM_API_BASE_URL` 로만 받고 코드에 기본값 없음
-- 설정이 없으면 HRUM 을 부르지 않고 `503 { status: "not-configured" }`
-- `HRUM_MAPPING_VERIFIED=true` 전에는 결과가 와도 `status: "unverified"` → 화면에 '계산 결과'로 쓰지 않음
-- 응답에 키 · 생년월일 · 이름을 넣지 않고, 로그에는 오류 코드만
-
-## 데이터 처리 기준
-
-| 항목 | 운결의 처리 | 계산 엔진에 맡기는 것 (문서 확인 필요) |
+| 공식 필드 | 운결 값 | 비고 |
 |---|---|---|
-| 양력 / 음력 | `calendar` 그대로, 음력이면 `calendar: "lunar"` | 음력 → 양력 변환 |
-| 윤달 | 음력이면 true/false 필수. **모르면 계산하지 않고 422** (추측 안 함) | 없는 윤달 판정 (`INVALID_LUNAR_DATE`) |
-| 출생 시각 미상 | `hour` `minute` 생략 → 시주 비움, 오행은 6글자 기준 | — |
-| 절기 경계 | 절기 날 ±1일이면 '월주가 시각에 따라 달라질 수 있음', 입춘 무렵이면 '연주도' 경고 | 실제 절입 시각 |
-| 표준시 · 서머타임 | `timezone: "Asia/Seoul"` 만 허용. 1908–1911 · 1948–1961 · 1987–1988 출생은 경고 | 역사적 표준시 · 서머타임 보정, 진태양시(경도) 보정 여부 |
-| 자시(23–01시) | 경고만 | 야자시 · 조자시 규칙 (`zaSiRule` — 예제에 이름만 있어 보내지 않음) |
-| 해외 출생 · 좌표 | 지원 전 (다른 시간대 400) | `birthLatitude` `birthLongitude` |
+| `year` `month` `day` | 생년월일 | 필수 |
+| `hour` `minute` | 출생 시각 | 모르면 **생략** → 시주 없이 3주 계산 |
+| `timezone` | `"Asia/Seoul"` 고정 | 필수 (생략 시 400) |
+| `gender` | `male` · `female` | 필수 (대운 방향) |
+| `calendar` · `isLeapMonth` | 음력일 때만 `"lunar"` · true/false | 윤달 모르면 운결이 422로 막음 (추측 안 함). 없는 윤달은 HRUM 400 `INVALID_LUNAR_DATE` |
+| `birthLatitude` `birthLongitude` `country` | 보내지 않음 | → 진태양시 보정 없이 표준시 기준 (보내면 경도 보정) |
+| `zaSiRule` | 보내지 않음 | → 공식 기본 `traditional` (23시 이후 다음 날 일주) |
+| `birthTimePrecision` `name` `astrology` `glossary` `lang` | 보내지 않음 | 이름은 개인정보라 보내지 않음, `lang` 기본 `ko` |
 
-## 응답 → 화면 데이터 매핑
+HRUM 이 직접 처리 (공식 문서): 절기 기준 원국 · 한국 서머타임(1948–51 · 1955–60 · 1987–88, 서울 시간대) 1시간 차감 · 음력 변환(KASI, 음력 1900-01-01 ~ 2050-11-30)
 
-| 화면 데이터 (`ManseResult`) | HRUM 응답 | 상태 |
+## 응답 매핑표 (HRUM → 운결)
+
+| 공식 응답 | 운결 필드 | 처리 |
 |---|---|---|
-| 년 · 월 · 일 · 시주 천간 · 지지 | `wonkuk.*.stemHanja` · `branchHanja` (운결 천간 · 지지 표와 맞지 않으면 실패) | 예제 기준 |
-| 시주 미상 | `wonkuk.hour === null` | 예제 기준 |
-| 일간 | 일주 천간 | 예제 기준 |
-| 오행 개수 | 운결이 8(6)글자에서 직접 셈 | 운결 계산 |
-| 십신 | 지금 화면은 운결의 다섯 갈래(비겁 · 식상 · 재성 · 관성 · 인성)를 일간 오행으로 계산 | `stemSipsin` `branchSipsin` 값 형식 확인 후 비교 · 연결 |
-| 대운 · 세운 · 용신 · 격국 · 신강/신약 | 쓰지 않음 (리포트에 '미연결') | 형식 확인 후 연결 |
+| `success` | — | `true` 가 아니면 실패 |
+| `data.wonkuk.{year,month,day,hour}.stemHanja` · `branchHanja` | `ManseResult.pillars[].stem` · `branch` | 운결 천간 · 지지 표로 변환. 표에 없으면 실패 |
+| `….stem` · `….branch` (한글) | `calculation.pillars[].stemHangul` · `branchHangul` | 한자와 맞지 않으면 실패 |
+| `data.wonkuk.day.stemHanja` | `ManseResult.dayMaster` | 일간 |
+| `data.wonkuk.hour === null` + `data.birthHour.known === false` | 시주 비움 · `hourKnown:false` · `birthHourKnown:false` | 공식 안내대로 `birthHour.known` 으로 판별 (`excludedFields` 안 씀) |
+| `….ohaeng` (목화토금수) | `calculation.pillars[].ohaeng` | 제공자 문자열 그대로 보관 |
+| `….stemSipsin` · `….branchSipsin` (10종) | `calculation.pillars[].stemSipsin` · `branchSipsin` | 그대로 보관 (일간 자리 표기는 문서에 없어 해석 안 함) |
+| `data.ohaengBalance {목,화,토,금,수}` | `calculation.ohaengBalance {wood,fire,earth,metal,water}` | 운결이 글자로 센 개수와 비교 → `verification.checks.ohaengBalanceMatches` |
+| `data.trueSolarTime` | `calculation.trueSolarTimeApplied` | null 이면 보정 안 함 |
+| `data.lunarInput` | `calculation.lunarConverted` | 있는지만 (세부 필드 미확인) |
+| `data.warnings[].code` | `warnings.provider` | 코드만 (예 `UNKNOWN_TIMEZONE`) |
+| `daeun` `seun` `yongshin` `gyeokguk` `strength` `jijanggan` `ungSung` 신살 등 | 변환하지 않음 | 리포트 '미연결' 유지 → 다음 단계 |
 
-## 연결 순서 (사용자 작업 → 개발 작업)
+## 운결 응답 (`/api/manse`)
+```
+{ status: "calculated" | "unverified" | "not-configured" | "error",
+  calculation: { manse, pillars[], ohaengBalance, birthHourKnown, trueSolarTimeApplied, lunarConverted, providerWarnings, checks },
+  warnings:    { provider: [코드], ungyeol: [{code, message}] },
+  verification:{ mappingVerified, checks: { ohaengBalanceMatches, hangulMatches } },
+  error:       { code, message, upstreamStatus?, upstreamCode? } }   ← 오류일 때만
+```
+- `calculated` = `HRUM_MAPPING_VERIFIED=true` **그리고** 자체 점검 일치. 그 외 성공은 `unverified`
+- 검증 전(`HRUM_MAPPING_VERIFIED` 없음)에는 `X-Manse-Check-Token` 이 맞는 요청만 계산 (403 `CHECK_TOKEN_REQUIRED`)
 
-1. HRUM 콘솔에서 API 키 발급 · 과금 설정
-2. 공식 문서에서 위 '확인 필요' 항목 확인 (특히 주소 · 시각 보정 · 자시 규칙 · 십신 값 형식)
-3. Vercel 프로젝트 → Settings → Environment Variables 에 `MANSE_PROVIDER=hrum` `HRUM_API_BASE_URL` `HRUM_API_KEY` 추가 (Production · Preview)
-4. 배포 후 `GET /api/manse` 가 `configured: true` 인지 확인
-5. 테스트 생년월일 몇 개로 다른 만세력과 대조 → 맞으면 `HRUM_MAPPING_VERIFIED=true`
-6. 그다음 화면을 `/api/manse` 결과로 바꾸는 작업 (resultStatus `calculated` 일 때만 '샘플' 표시 해제)
+## 오류 (공식 → 운결)
+| HRUM | 운결 code · HTTP | 재시도 |
+|---|---|---|
+| 400 `INVALID_LUNAR_DATE` | `INVALID_LUNAR_DATE` 400 | 안 함 |
+| 400 기타 (`INVALID_LOCATION` · 형식) | `INVALID_INPUT` 400 | 안 함 |
+| 401 키 없음 · 잘못됨 | `AUTH` 503 | 안 함 |
+| 402 잔액 부족 (만세력은 code 없음) | `INSUFFICIENT_BALANCE` 503 | 안 함 |
+| 403 보안 규칙 (HTML 본문) | `BLOCKED` 503 | 안 함 |
+| 429 | `RATE_LIMITED` 503 | 안 함 |
+| 500 · 502 · 503 · 504 | `UPSTREAM` 503 | **1번** (1초 뒤) |
+| 시간 초과(기본 8초) | `TIMEOUT` 504 | 안 함 |
+공식: 실패(4xx · 5xx) 응답은 과금 없음 · 성공 1건 ₩50 · 키당 분당 300회 상한
+
+## 실제 호출 검증 순서
+1. Vercel 환경 변수 등록 (아래) → 재배포
+2. `GET /api/manse` → `configured: true`, `screen: "sample"`
+3. `UNGYEOL_URL=… MANSE_CHECK_TOKEN=… node scripts/manse-check.mjs --yes` (최대 4건, ₩200 이하)
+4. `manse-check-result.json` 을 대화로 전달 → 기준값과 대조 · 십신 표기 확인
+5. 모두 맞으면 그때 `HRUM_MAPPING_VERIFIED=true` → 화면 연결 작업 (별도 단계)

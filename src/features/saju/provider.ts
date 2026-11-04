@@ -13,8 +13,9 @@ export const DEMO_PROFILE: DemoProfile = {
 
    ManseProvider     : 화면은 이 인터페이스에만 의존
    MockManseProvider : 지금 사용. 입력과 무관한 '고정 샘플'을 돌려줌 (isSample: true)
-   HrumManseProvider : 다음 단계. 서버(Route Handler)에서만 HRUM API 를 호출하고
-                       API 키는 서버 환경변수(예: HRUM_API_KEY)로만 읽음 → 클라이언트 번들에 넣지 않음
+   실제 계산       : 서버 전용 src/server/manse (POST /api/manse → HRUM 공식 만세력 API)
+                     키는 서버 환경 변수 HRUM_API_KEY 로만 읽음 → 클라이언트 번들에 넣지 않음
+                     실제 호출 검증 · 기준 만세력 대조(HRUM_MAPPING_VERIFIED) 전에는 화면을 샘플에서 바꾸지 않음
    ────────────────────────────────────────────────────────── */
 
 export interface ManseProvider {
