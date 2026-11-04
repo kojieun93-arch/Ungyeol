@@ -1,7 +1,7 @@
 import { validateManseRequest, boundaryWarnings } from "@/server/manse/input";
 import { readManseConfig, resolveManseEndpoint } from "@/server/manse/config";
 import { buildHrumBody, parseHrumResponse, mapHrumError, fetchHrumManse } from "@/server/manse/hrum";
-import { takeToken, resetRateLimit } from "@/server/manse/rateLimit";
+import { __resetMemoryStore as resetRateLimit, memoryStore } from "@/server/manse/store";
 import { calculateManse, clearManseCache } from "@/server/manse/service";
 import { handleMansePost, handleManseStatus } from "@/server/manse/handler";
 import { monthWindow, yearGanJi } from "@/features/products/calendar";
@@ -68,6 +68,6 @@ await t("라우트: 키가 있어도 검증 전 토큰 없음/틀림 → 403 CHE
 await t("라우트: 토큰 있음 → 200 unverified · calculation · warnings · verification · 응답에 키/이름 없음", async () => { resetRateLimit(); clearManseCache(); const r = await handleMansePost(req({ ...base, nickname: "지은" }, tok), ENV, fakeFetch(200, official())); const text = await r.text(); const b = JSON.parse(text); return r.status === 200 && b.status === "unverified" && b.calculation.manse.source === "hrum" && b.verification.mappingVerified === false && !text.includes("test-key-123") && !text.includes("지은"); });
 await t("라우트: 다른 Origin 403 · 큰 본문 413 · 깨진 JSON 400 · 윤달 모름 422 · HRUM 402 → 503 INSUFFICIENT_BALANCE", async () => { resetRateLimit(); clearManseCache(); const s = [(await handleMansePost(req(base, { origin: "https://evil.example" }), ENV)).status, (await handleMansePost(req("x".repeat(3000), tok), ENV)).status, (await handleMansePost(req("{bad", tok), ENV)).status, (await handleMansePost(req({ ...base, calendar: "lunar", leap: null }, tok), ENV)).status]; const r = await handleMansePost(req(base, tok), ENV, fakeFetch(402, { success: false, statusCode: 402 })); const b = await r.json(); return eq(s, [403, 413, 400, 422]) && r.status === 503 && b.error.code === "INSUFFICIENT_BALANCE" && b.error.upstreamStatus === 402; });
 await t("라우트: 분당 한도 → 429 + Retry-After", async () => { resetRateLimit(); clearManseCache(); const env = { ...ENV, MANSE_RATE_LIMIT_PER_MINUTE: "2" }; const st = []; let last: Response | null = null; for (let i = 0; i < 3; i++) { last = await handleMansePost(req(base, { ...tok, "x-forwarded-for": "1.2.3.4" }), env, fakeFetch(200, official())); st.push(last.status); } return eq(st, [200, 200, 429]) && !!last!.headers.get("retry-after"); });
-await t("사용량 제한: 분당 3회 → 4번째 거절 · 1분 뒤 허용", () => { resetRateLimit(); const n = 1e6; return eq([1, 2, 3, 4].map(() => takeToken("k", 3, n).ok), [true, true, true, false]) && takeToken("k", 3, n + 60_001).ok; });
+await t("사용량 제한(메모리 저장소): 3회 → 4번째 거절 · 창이 지나면 허용", async () => { let n = 1e6; const s = memoryStore(() => n); const a = []; for (let i = 0; i < 4; i++) a.push((await s.take("k", 3, 60)).ok); n += 60_001; return eq(a, [true, true, true, false]) && (await s.take("k", 3, 60)).ok; });
 await t("달력 회귀: 2025 乙巳 · 2027 丁未 · 2025-03 戊寅/己卯 · 2027-01 庚子/辛丑", () => eq([yearGanJi(2025).hanja, yearGanJi(2027).hanja, monthWindow(2025, 3).before.ganji.hanja, monthWindow(2025, 3).after.ganji.hanja, monthWindow(2027, 1).before.ganji.hanja, monthWindow(2027, 1).after.ganji.hanja], ["乙巳", "丁未", "戊寅", "己卯", "庚子", "辛丑"]));
 console.log(R.join("\n")); console.log(`\n${pass} ok / ${fail} fail`);

@@ -177,7 +177,7 @@ export function ManseCard({ r, mode, titleId, action }: CardProps) {
       footnote={
         isDemo(r)
           ? `※ 본 카드는 화면 구성을 보여드리기 위한 샘플 결과로, 입력하신 생년월일로 계산한 결과가 아닙니다. ${demoBasis(r)}${r.manseResult.hourKnown ? "" : " 태어난 시간을 모른다고 하셔서 시주는 미확정으로 두었어요."}`
-          : `※ 실제 만세력 계산 · ${r.liveExtras?.basis[0] ?? "입력하신 생년월일로 계산한 원국이에요."} ${r.liveExtras?.basis[1] ?? ""} 십신은 HRUM 값이에요.${r.manseResult.hourKnown ? "" : " 태어난 시간을 몰라 시주는 비워 두었어요."}`
+          : `※ 실제 만세력 계산 · ${r.liveExtras?.basis[0] ?? "입력하신 생년월일로 계산한 원국이에요."} ${r.liveExtras?.basis[1] ?? ""} 십신은 HRUM 값이에요.${r.manseResult.hourKnown ? "" : " 태어난 시간을 몰라 시주는 비워 두었어요."}${r.liveExtras?.warnings.length ? ` 읽을 때 참고: ${r.liveExtras.warnings.filter((w) => !w.startsWith("출생 시각을 몰라 시주는")).join(" ")}` : ""}`
       }
     >
       {/* 공유 이미지에는 만세력 표를 넣지 않음 — 생년월일을 짐작할 수 있는 정보 */}

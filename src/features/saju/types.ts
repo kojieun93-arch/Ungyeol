@@ -170,8 +170,31 @@ export type LiveExtras = {
   warnings: string[];
 };
 
+/**
+ * 각 값의 출처 — 실제 사주 데이터와 운결 자체 해석 · 비유를 섞지 않기 위한 표시
+ * - hrum: HRUM 만세력 계산값 (원국 · 오행 개수 · 십신)
+ * - sample: 화면 구성용 데모 사주
+ * - ungyeol-table: 운결 해설표로 쓴 문장 (일간 기질 · 오행 풀이)
+ * - ungyeol-analogy-draft: 운결 비유 분류 시안 (사주 기반 참고 MBTI — 계산 · 진단 아님)
+ * - user-selected: 사용자가 직접 고른 값 (MBTI)
+ * - unconnected: 아직 계산하지 않음 (대운 · 세운 · 용신 · 격국 · 신강약 · 지장간 · 12운성 · 신살)
+ */
+export type Provenance = {
+  manse: "hrum" | "sample";
+  fiveElements: "hrum" | "sample";
+  tenGods: "hrum" | "unconnected";
+  dayMasterText: "ungyeol-table";
+  referenceMbti: "ungyeol-analogy-draft";
+  selfMbti: "user-selected" | "none";
+  fortune: "unconnected";
+  unconnected: readonly string[];
+};
+export const UNCONNECTED_FIELDS = ["대운", "세운", "월운", "용신", "격국", "신강약", "지장간", "12운성", "신살", "상대방 원국"] as const;
+
 /** 결과 카드 6종이 받는 데이터 */
 export type ResultPayload = {
+  /** 값마다의 출처 (실제 사주 데이터 / 운결 해석 · 비유 / 미연결) */
+  provenance: Provenance;
   resultStatus: ResultStatus;
   /** demo 일 때 기준 프로필 */
   demo: DemoProfile | null;

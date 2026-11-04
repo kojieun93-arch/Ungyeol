@@ -10,7 +10,7 @@
     "dev:mobile": "next dev -H 0.0.0.0",
     "typecheck": "tsc --noEmit",
     "verify": "npm run typecheck && npm run build",
-    "test:manse": "npx --yes esbuild@0.24.0 tests/manse/server.test.ts tests/manse/live.test.ts --bundle --platform=node --format=esm --outdir=.tests --log-level=warning && node .tests/server.test.js && node .tests/live.test.js"
+    "test:manse": "npx --yes esbuild@0.24.0 tests/manse/server.test.ts tests/manse/live.test.ts tests/manse/verified.test.ts tests/manse/protect.test.ts --bundle --platform=node --format=esm --outdir=.tests --out-extension:.js=.mjs --log-level=warning && node .tests/server.test.mjs && node .tests/live.test.mjs && node .tests/verified.test.mjs && node .tests/protect.test.mjs"
   },
   "dependencies": {
     "html-to-image": "^1.11.13",

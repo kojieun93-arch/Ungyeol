@@ -73,19 +73,25 @@ export type BoundaryWarning = { code: "TIME_UNKNOWN" | "NEAR_SOLAR_TERM" | "NEAR
  */
 export function boundaryWarnings(v: ManseRequest): BoundaryWarning[] {
   const w: BoundaryWarning[] = [];
-  if (!v.time) w.push({ code: "TIME_UNKNOWN", message: "출생 시각을 몰라 시주는 비워 두고 계산해요." });
+  if (!v.time) w.push({ code: "TIME_UNKNOWN", message: "출생 시각을 몰라 시주는 비우고 연 · 월 · 일주 여섯 글자로 계산했어요. 오행 개수와 십신도 여섯 글자 기준이에요." });
   if (v.calendar === "lunar") w.push({ code: "LUNAR_CONVERTED_BY_PROVIDER", message: "음력 생일은 계산 엔진이 한국천문연구원 기준으로 양력으로 바꿔 계산해요." });
   else {
     const t = MONTH_TERMS[v.birth.m - 1];
     if (Math.abs(v.birth.d - t.day) <= 1) {
       w.push({ code: "NEAR_SOLAR_TERM", message: `${t.term}(${v.birth.m}월 ${t.day}일 무렵) 가까이 태어나 월주가 출생 시각에 따라 달라질 수 있어요.` });
       if (v.birth.m === 2) w.push({ code: "NEAR_IPCHUN", message: "입춘 무렵이라 연주도 출생 시각에 따라 달라질 수 있어요." });
+      if (!v.time) w.push({ code: "NEAR_SOLAR_TERM", message: "출생 시각을 몰라 절기 전후를 가를 수 없어요. 이 날은 월주(입춘이면 연주도)가 실제와 다를 수 있어요." });
     }
   }
   // 공식 문서: 1948–51 · 1955–60 · 1987–88 서머타임 기간 출생은 HRUM 이 1시간을 빼서 계산 (timezone 이 서울일 때)
+  // 1987 · 1988 은 시행 기간을 알고 있어 그 안일 때만 안내, 그 밖의 해는 기간 안일 수 있다고만 안내
   const y = v.birth.y;
-  if (v.time && ((y >= 1948 && y <= 1951) || (y >= 1955 && y <= 1960) || (y >= 1987 && y <= 1988)))
-    w.push({ code: "KOREA_DST", message: "서머타임 시행 시기 출생이라, 계산 엔진이 출생 시각에서 1시간을 빼서 계산해요. 기록된 시각이 서머타임 기준인지 확인해 주세요." });
+  if (v.time && v.calendar === "solar" && (y === 1987 || y === 1988)) {
+    const st = `${y}-${String(v.birth.m).padStart(2, "0")}-${String(v.birth.d).padStart(2, "0")}T${String(v.time.h).padStart(2, "0")}:${String(v.time.m).padStart(2, "0")}`;
+    const [a, b] = y === 1987 ? ["1987-05-10T02:00", "1987-10-11T03:00"] : ["1988-05-08T02:00", "1988-10-09T03:00"];
+    if (st >= a && st < b) w.push({ code: "KOREA_DST", message: "서머타임 기간(1987–88) 출생이라, 계산 엔진이 출생 시각에서 1시간을 빼서 시주를 계산해요. 기록된 시각이 서머타임 시계 기준이 아니라면 결과가 달라질 수 있어요." });
+  } else if (v.time && ((y >= 1948 && y <= 1951) || (y >= 1955 && y <= 1960) || (v.calendar === "lunar" && (y === 1987 || y === 1988))))
+    w.push({ code: "KOREA_DST", message: "서머타임을 시행한 해에 태어났어요. 시행 기간(대개 봄~가을) 안의 출생이면 계산 엔진이 출생 시각에서 1시간을 빼서 계산해요." });
   // 문서에 따로 설명이 없는 예전 표준시(UTC+8:30) 시기는 주의 안내만
   if (v.time && ((y >= 1908 && y <= 1911) || (y >= 1954 && y <= 1961)))
     w.push({ code: "KOREA_STANDARD_TIME_CHANGE", message: "대한민국 표준시가 지금과 달랐던 시기예요. 출생 시각 해석에 주의가 필요해요." });

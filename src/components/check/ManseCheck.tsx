@@ -29,10 +29,11 @@ type Api = {
     birthHourKnown?: boolean;
     lunarConverted?: boolean;
     trueSolarTimeApplied?: boolean;
+    missing?: string[];
   };
   billing?: { upstreamCalled: boolean; replayed: boolean | null; estimatedChargeKRW: number; basis: string };
   warnings?: { provider: string[]; ungyeol: { code: string }[] };
-  verification?: { mappingVerified: boolean; checks: { ohaengBalanceMatches: boolean | null; hangulMatches: boolean; stemSipsinMatches?: boolean | null; sipsinNamesKnown?: boolean } };
+  verification?: { mappingVerified: boolean; checks: { ohaengBalanceMatches: boolean | null; hangulMatches: boolean; stemSipsinMatches?: boolean | null; sipsinNamesKnown?: boolean; requiredPresent?: boolean; basisMatches?: boolean }; reasons?: string[] };
   error?: { code: string; message: string; upstreamStatus?: number; upstreamCode?: string | null };
 };
 
@@ -72,13 +73,14 @@ function analyze(c: Case, http: number, data: Api | null): Result {
   // 사례별 추가 점검: 시각 모름 → birthHourKnown false · 음력 → lunarConverted true · 오행 개수 일치 · 한글/한자 일치
   const calc = data?.calculation;
   const checks = data?.verification?.checks;
-  let extraOk = formatOk && checks?.hangulMatches === true && checks?.ohaengBalanceMatches !== false && checks?.stemSipsinMatches !== false && checks?.sipsinNamesKnown !== false;
+  let extraOk = formatOk && checks?.hangulMatches === true && checks?.ohaengBalanceMatches !== false && checks?.stemSipsinMatches !== false && checks?.sipsinNamesKnown !== false && checks?.requiredPresent !== false;
   if (formatOk && checks?.stemSipsinMatches === false) note.push("천간 십신이 표준 규칙(음양 · 생극)과 달라요");
   if (formatOk && checks?.sipsinNamesKnown === false) note.push("십신 이름이 공식 10종 밖이에요");
   if (formatOk && c.body.time === null && calc?.birthHourKnown !== false) (extraOk = false), note.push("시각 모름인데 birthHour.known 이 false 가 아니에요");
   if (formatOk && c.body.calendar === "lunar" && calc?.lunarConverted !== true) (extraOk = false), note.push("음력인데 lunarInput 이 없어요");
   if (formatOk && checks?.ohaengBalanceMatches === null) note.push("ohaengBalance 가 응답에 없어요");
   if (formatOk && calc?.trueSolarTimeApplied) note.push("진태양시 보정이 적용됐어요 (기준값은 보정 없음)");
+  if (formatOk && Array.isArray(calc?.missing) && calc.missing.length) (extraOk = false), note.push(`응답에 없는 필드: ${calc.missing.join(", ")}`);
   return { id: c.id, http, ok: http === 200, formatOk, pillars, match, allMatch, extraOk, data, note };
 }
 
@@ -93,6 +95,20 @@ export function ManseCheck() {
   const [stopped, setStopped] = useState<string | null>(null);
   const [counts, setCounts] = useState({ sent: 0, upstream: 0, krw: 0 });
   const [copied, setCopied] = useState<string | null>(null);
+  const [probe, setProbe] = useState<Record<string, unknown> | null>(null);
+
+  // 공유 저장소 확인 — HRUM 을 부르지 않음 (과금 없음)
+  const runProbe = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const r = await fetch("/api/manse?probe=store", { cache: "no-store", headers: { "X-Manse-Check-Token": token.trim() } });
+      setProbe({ http: r.status, ...((await r.json().catch(() => ({}))) as Record<string, unknown>) });
+    } catch {
+      setProbe({ http: 0 });
+    }
+    setBusy(false);
+  };
 
   useEffect(() => {
     fetch("/api/manse", { cache: "no-store" })
@@ -158,7 +174,8 @@ export function ManseCheck() {
     {
       at: new Date().toISOString().slice(0, 16),
       host: typeof window !== "undefined" ? window.location.host : "",
-      server: server ? { configured: server.configured, mappingVerified: server.mappingVerified, screen: server.screen } : null,
+      server: server ? { configured: server.configured, mappingVerified: server.mappingVerified, screen: server.screen, protection: server.protection, publicBlockers: server.publicBlockers } : null,
+      store: probe ? { http: probe.http, shared: probe.shared, writeRead: probe.writeRead, budget: probe.budget, botCheck: probe.botCheck } : null,
       counts,
       stopped,
       results: [...cases, ...extra].filter((c) => results[c.id]).map((c) => {
@@ -175,6 +192,8 @@ export function ManseCheck() {
           sipsin: r.data?.calculation?.pillars?.map((p) => `${p.key}:${p.stemSipsin ?? "-"}/${p.branchSipsin ?? "-"}/${p.ohaeng ?? "-"}`) ?? null,
           ohaengBalance: r.data?.calculation?.ohaengBalance ?? null,
           checks: r.data?.verification?.checks ?? null,
+          reasons: r.data?.verification?.reasons ?? null,
+          missing: r.data?.calculation?.missing ?? null,
           flags: r.data?.calculation ? { birthHourKnown: r.data.calculation.birthHourKnown, lunarConverted: r.data.calculation.lunarConverted, trueSolarTimeApplied: r.data.calculation.trueSolarTimeApplied } : null,
           warnings: r.data?.warnings ?? null,
           billing: r.data?.billing ?? null,
@@ -204,17 +223,17 @@ export function ManseCheck() {
         </div>
         <h1 className="mt-3 text-center font-serif text-[1.45rem] font-semibold">만세력 실제 계산 검증</h1>
         <p className="mt-2 text-center text-[14px] leading-[1.6] text-chat-muted [word-break:keep-all]">
-          운영자 확인용 화면이에요. 사용자 화면은 계속 샘플 사주로 보여요. 이 화면의 계산은 HRUM 크레딧을 써요 (성공 1건 ₩50, 최대 4건).
+          운영자 확인용 화면이에요. 사용자 화면은 계속 샘플 사주로 보여요. 이 화면의 계산은 HRUM 크레딧을 써요 (성공 1건 ₩50). 저장소 확인은 크레딧을 쓰지 않아요.
         </p>
 
         <Sheet className="mt-6 px-4 pt-7 pb-5">
           <h2 className="font-serif text-[17px] font-semibold text-[#4a1a2c]">서버 상태</h2>
           <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[14.5px]" data-server>
             {server ? (
-              ["configured", "endpointHost", "mappingVerified", "checkTokenRequired", "screen"].map((k) => (
+              ["configured", "endpointHost", "mappingVerified", "checkTokenRequired", "screen", "protection", "publicBlockers"].map((k) => (
                 <div key={k} className="contents">
                   <dt className="text-[#7b6266]">{k}</dt>
-                  <dd className="font-medium break-all">{String(server[k] ?? (server.error ? "—" : "없음"))}</dd>
+                  <dd className="font-medium break-all">{typeof server[k] === "object" && server[k] !== null ? (Array.isArray(server[k]) ? (server[k] as string[]).join(", ") || "없음" : Object.entries(server[k] as Record<string, unknown>).map(([a, b]) => `${a}: ${b}`).join(" · ")) : String(server[k] ?? (server.error ? "—" : "없음"))}</dd>
                 </div>
               ))
             ) : (
@@ -243,6 +262,34 @@ export function ManseCheck() {
           <button type="button" onClick={() => setToken("")} className="mt-1 min-h-11 text-[14px] text-[#6e2a40] underline decoration-[#c9a27a] underline-offset-4">
             토큰 지우기
           </button>
+        </Sheet>
+
+        <Sheet className="mt-8 px-4 pt-7 pb-5">
+          <h2 className="font-serif text-[17px] font-semibold text-[#4a1a2c]">공유 사용량 저장소 확인</h2>
+          <p className="mt-1 text-[14px] leading-[1.55] text-[#6b5459] [word-break:keep-all]">
+            서버 인스턴스 전체가 같은 하루 예산을 보는지 확인해요. HRUM 은 부르지 않아요 (과금 없음). 공개 전에 shared 가 true 여야 해요.
+          </p>
+          <button type="button" onClick={runProbe} disabled={busy || token.trim().length < 24 || !server?.configured} className="mt-3 min-h-12 w-full rounded-full text-[15px] font-medium text-[#6e2a40] shadow-[inset_0_0_0_1.5px_#c9a27a] disabled:opacity-40" data-probe>
+            저장소 확인하기
+          </button>
+          {probe && (
+            <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[14.5px]" data-probe-result>
+              {[
+                ["shared", String(probe.shared ?? false)],
+                ["store", String(probe.store ?? "—")],
+                ["쓰기 · 읽기", String(probe.writeRead ?? false)],
+                ["응답 시간", probe.latencyMs !== undefined ? `${probe.latencyMs}ms` : "—"],
+                ["오늘 HRUM 호출", probe.budget ? `${(probe.budget as any).used} / ${(probe.budget as any).limit} (공개 ${(probe.budget as any).publicLimit}, 운영자 몫 ${(probe.budget as any).operatorReserve})` : "—"],
+                ["봇 확인", String(probe.botCheck ?? "—")],
+                ["공개 전 남은 설정", Array.isArray(probe.publicBlockers) ? (probe.publicBlockers as string[]).join(", ") || "없음" : "—"],
+              ].map(([k, v]) => (
+                <div key={k} className="contents">
+                  <dt className="text-[#7b6266]">{k}</dt>
+                  <dd className="font-medium break-all">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
         </Sheet>
 
         <Sheet className="mt-8 px-4 pt-7 pb-5">

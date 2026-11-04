@@ -2,6 +2,7 @@ import { ELEMENTS, ELEMENT_ORDER, elementLabel } from "./elements";
 import { AXIS, LETTER_COMMON, MBTI_TEXT, axisDifference, isLetter } from "./mbti";
 import { DAY_MASTER_TRAITS, REFERENCE_MBTI_NOTE } from "./personality";
 import { DEMO_PROFILE } from "./provider";
+import { UNCONNECTED_FIELDS } from "./types";
 import type {
   ConsultationProfile,
   ResultPayload,
@@ -228,7 +229,19 @@ export function buildResultPayload(
   const comparison = buildComparison(sajuMBTIReference.type, mbti);
   // 공개 샘플 리포트는 사용자 입력이 없어도 데모로 보여 줌. 그 외에는 생년월일이 없으면 unavailable
   const resultStatus = !profile.birth && !opts.publicSample ? "unavailable" : manse.isSample ? "demo" : "calculated";
+  const liveExtras = !manse.isSample && resultStatus === "calculated" ? (opts.liveExtras ?? null) : null;
+  const real = !manse.isSample && resultStatus === "calculated";
   return {
+    provenance: {
+      manse: real ? "hrum" : "sample",
+      fiveElements: real ? "hrum" : "sample",
+      tenGods: liveExtras ? "hrum" : "unconnected",
+      dayMasterText: "ungyeol-table",
+      referenceMbti: "ungyeol-analogy-draft",
+      selfMbti: mbti ? "user-selected" : "none",
+      fortune: "unconnected",
+      unconnected: UNCONNECTED_FIELDS,
+    },
     resultStatus,
     demo: manse.isSample ? DEMO_PROFILE : null,
     mixesUserMbti: manse.isSample && !!mbti,
@@ -240,6 +253,6 @@ export function buildResultPayload(
     comparison,
     integratedInsight: buildInsight(manse, sajuPersonality, comparison),
     // 실제 계산 결과(manse.isSample=false)에만 붙임
-    liveExtras: !manse.isSample && resultStatus === "calculated" ? (opts.liveExtras ?? null) : null,
+    liveExtras,
   };
 }

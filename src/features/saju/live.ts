@@ -23,6 +23,8 @@ export type LiveEntry =
 
 let mode: LiveMode = "unknown";
 let modeReq: Promise<void> | null = null;
+/** 봇 확인(Turnstile) 사이트 키 — 서버 상태 응답이 공개 모드일 때만 줌 (공개값) */
+let botSiteKey: string | null = null;
 const entries = new Map<string, LiveEntry>();
 const listeners = new Set<() => void>();
 let version = 0;
@@ -48,6 +50,7 @@ export function ensureLiveMode(fetchImpl: typeof fetch = fetch): Promise<void> {
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         mode = j && j.screen === "live" ? "live" : "sample";
+        botSiteKey = mode === "live" && typeof j?.turnstileSiteKey === "string" ? j.turnstileSiteKey : null;
       })
       .catch(() => {
         mode = "sample";
@@ -64,7 +67,58 @@ const REASON: Record<string, string> = {
   INVALID_INPUT: "입력하신 정보로 계산하지 못했어요.",
   RATE_LIMITED: "요청이 많아 지금은 계산하지 못했어요.",
   DAILY_LIMIT: "오늘 계산 횟수를 모두 써서 계산하지 못했어요.",
+  CONCURRENT: "이전 계산이 진행 중이라 지금은 계산하지 못했어요.",
+  BUDGET_EXCEEDED: "오늘 준비된 계산량을 모두 써서 계산하지 못했어요.",
+  LIMIT_STORE_UNAVAILABLE: "지금은 계산 서버가 바빠 계산하지 못했어요.",
+  BOT_CHECK_FAILED: "자동 요청 확인을 통과하지 못해 계산하지 못했어요.",
+  TICKET_REQUIRED: "화면 확인 정보가 만료되어 계산하지 못했어요. 새로고침 후 다시 시도해 주세요.",
 };
+
+/* ── 봇 확인 (Cloudflare Turnstile, 운영자가 켰을 때만)
+   요청마다 보이지 않는 위젯으로 토큰을 받음. 확인이 필요하면 Cloudflare 가 작은 확인 상자를 띄움
+   10초 안에 못 받으면 토큰 없이 보냄 → 서버가 거절 → 샘플 + 이유 */
+type TurnstileApi = { render: (el: HTMLElement, o: Record<string, unknown>) => string; remove: (id: string) => void };
+let tsScript: Promise<TurnstileApi | null> | null = null;
+function loadTurnstile(): Promise<TurnstileApi | null> {
+  const w = window as unknown as { turnstile?: TurnstileApi };
+  if (w.turnstile) return Promise.resolve(w.turnstile);
+  if (!tsScript)
+    tsScript = new Promise((resolve) => {
+      const sc = document.createElement("script");
+      sc.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      sc.async = true;
+      sc.onload = () => resolve(w.turnstile ?? null);
+      sc.onerror = () => resolve(null);
+      document.head.appendChild(sc);
+    });
+  return tsScript;
+}
+async function botToken(siteKey: string): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  const api = await loadTurnstile();
+  if (!api) return null;
+  return new Promise((resolve) => {
+    const el = document.createElement("div");
+    el.setAttribute("data-bot-check", "");
+    el.style.cssText = "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:60";
+    document.body.appendChild(el);
+    let id = "";
+    const done = (t: string | null) => {
+      clearTimeout(timer);
+      try {
+        if (id) api.remove(id);
+      } catch {}
+      el.remove();
+      resolve(t);
+    };
+    const timer = setTimeout(() => done(null), 10_000);
+    try {
+      id = api.render(el, { sitekey: siteKey, action: "manse", appearance: "interaction-only", callback: (t: string) => done(t), "error-callback": () => done(null), "expired-callback": () => done(null) });
+    } catch {
+      done(null);
+    }
+  });
+}
 
 /** 서버 응답 → ManseResult (운결 천간 · 지지 표로 다시 만듦 — 응답 모양을 그대로 믿지 않음) */
 export function toLiveEntry(j: unknown): LiveEntry {
@@ -115,14 +169,25 @@ export async function requestLive(p: Profile, fetchImpl: typeof fetch = fetch): 
   entries.set(k, { phase: "loading" });
   emit();
   let entry: LiveEntry;
+  const body = JSON.stringify({ calendar: p.calendar, leap: p.calendar === "lunar" ? p.leap : null, birth: p.birth, time: p.time ?? null, gender: p.gender });
+  const post = async () => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (botSiteKey) {
+      const t = await botToken(botSiteKey);
+      if (t) headers["X-Turnstile-Token"] = t;
+    }
+    // 같은 출처 요청이라 서명 쿠키(HttpOnly)가 함께 감 — 스크립트는 쿠키 값을 모름
+    const res = await fetchImpl("/api/manse", { method: "POST", cache: "no-store", credentials: "same-origin", headers, body });
+    return res.json().catch(() => null);
+  };
   try {
-    const res = await fetchImpl("/api/manse", {
-      method: "POST",
-      cache: "no-store",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ calendar: p.calendar, leap: p.calendar === "lunar" ? p.leap : null, birth: p.birth, time: p.time ?? null, gender: p.gender }),
-    });
-    entry = toLiveEntry(await res.json().catch(() => null));
+    let j = await post();
+    // 서명 쿠키 만료 · 네트워크 변경(IP) → 상태를 다시 받아 쿠키를 새로 받고 한 번만 다시 시도
+    if (j?.error?.code === "TICKET_REQUIRED") {
+      await fetchImpl("/api/manse", { cache: "no-store", credentials: "same-origin" }).catch(() => null);
+      j = await post();
+    }
+    entry = toLiveEntry(j);
   } catch {
     entry = { phase: "fallback", reason: "계산 서버에 연결하지 못해 샘플로 보여드려요." };
   }
@@ -154,6 +219,7 @@ export function useLive(p: Profile | null): { mode: LiveMode; entry: LiveEntry |
 /** 테스트용 */
 export function __resetLive(m: LiveMode = "unknown") {
   mode = m;
+  botSiteKey = null;
   modeReq = null;
   entries.clear();
   emit();

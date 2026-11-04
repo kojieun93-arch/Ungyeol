@@ -33,7 +33,9 @@ export type ManseErrorCode =
   | "RATE_LIMITED"
   | "TIMEOUT"
   | "UPSTREAM"
-  | "UNEXPECTED_RESPONSE";
+  | "UNEXPECTED_RESPONSE"
+  | "BUDGET_EXCEEDED"
+  | "LIMIT_STORE_UNAVAILABLE";
 
 export class ManseError extends Error {
   constructor(
@@ -66,7 +68,11 @@ export type HrumCalculation = {
     stemSipsinMatches: boolean | null;
     /** 십신 값이 공식 10종 이름 안에 있는지 */
     sipsinNamesKnown: boolean;
+    /** 화면에 쓰는 필드(ohaengBalance · 기둥별 ohaeng · 천간 십신 · 지지 십신)가 모두 있는지 */
+    requiredPresent: boolean;
   };
+  /** 응답에 없던 필드 이름 (예: "hour.branchSipsin", "ohaengBalance") — 하나라도 있으면 calculated 안 됨 */
+  missing: string[];
 };
 
 export function buildHrumBody(v: ManseRequest): Record<string, unknown> {
@@ -149,6 +155,15 @@ export function parseHrumResponse(json: unknown, timeSent: boolean): HrumCalcula
   const names = extras.flatMap((e) => [e.key === "day" ? null : e.stemSipsin, e.branchSipsin]).filter((x): x is string => !!x);
   const sipsinNamesKnown = names.every((n) => SIPSIN_NAMES.includes(n));
 
+  // 화면에 쓰는 필드가 빠졌는지 (빠지면 운결이 대신 채우지 않고 '실제 계산'으로 내보내지 않음)
+  const missing: string[] = [];
+  if (!ohaengBalance) missing.push("ohaengBalance");
+  for (const e of extras) {
+    if (!e.ohaeng) missing.push(`${e.key}.ohaeng`);
+    if (e.key !== "day" && !e.stemSipsin) missing.push(`${e.key}.stemSipsin`);
+    if (!e.branchSipsin) missing.push(`${e.key}.branchSipsin`);
+  }
+
   const warnings = Array.isArray(data.warnings) ? (data.warnings as unknown[]).map((w) => str((w as { code?: unknown })?.code)).filter((x): x is string => !!x) : [];
 
   return {
@@ -159,7 +174,8 @@ export function parseHrumResponse(json: unknown, timeSent: boolean): HrumCalcula
     trueSolarTimeApplied: data.trueSolarTime !== null && data.trueSolarTime !== undefined,
     lunarConverted: data.lunarInput !== null && data.lunarInput !== undefined,
     providerWarnings: warnings,
-    checks: { ohaengBalanceMatches, hangulMatches, stemSipsinMatches, sipsinNamesKnown },
+    checks: { ohaengBalanceMatches, hangulMatches, stemSipsinMatches, sipsinNamesKnown, requiredPresent: missing.length === 0 },
+    missing,
   };
 }
 
