@@ -26,3 +26,20 @@ export function elementOf(dm: ElementKey, group: GodGroup): ElementKey {
   const all: ElementKey[] = ["wood", "fire", "earth", "metal", "water"];
   return all.find((k) => relationTo(dm, k).name === group)!;
 }
+
+/* ── 천간 십신 (일간 기준, 표준 규칙) ──
+   같은 갈래 안에서 음양이 같으면 앞의 것(비견 · 식신 · 편재 · 편관 · 편인), 다르면 뒤의 것(겁재 · 상관 · 정재 · 정관 · 정인)
+   지지 십신은 지장간 · 음양 해석이 학파마다 달라 운결이 따로 계산하지 않음 (HRUM 값을 그대로 씀) */
+export const SIPSIN_PAIR: Record<GodGroup, [string, string]> = {
+  비겁: ["비견", "겁재"],
+  식상: ["식신", "상관"],
+  재성: ["편재", "정재"],
+  관성: ["편관", "정관"],
+  인성: ["편인", "정인"],
+};
+export const SIPSIN_NAMES = Object.values(SIPSIN_PAIR).flat();
+
+export function stemSipsin(dm: { element: ElementKey; yinYang: "yang" | "yin" }, g: { element: ElementKey; yinYang: "yang" | "yin" }): string {
+  const [same, diff] = SIPSIN_PAIR[relationTo(dm.element, g.element).name];
+  return dm.yinYang === g.yinYang ? same : diff;
+}

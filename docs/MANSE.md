@@ -1,6 +1,35 @@
-# 만세력 연결 (PHASE 6-2 — 공식 명세 반영 · 실제 호출 검증 대기)
+# 만세력 연결 (PHASE 6-4 — 화면 연결 준비 완료 · 공개 전)
 
-> 현재 화면: **샘플 사주(운결 데모 사주, 일간 乙木)** 그대로예요. 실제 호출 검증과 기준 만세력 대조가 끝나기 전에는 바꾸지 않아요.
+> 현재 화면: **샘플 사주(운결 데모 사주, 일간 乙木)** 그대로예요.
+> 사용자 화면이 실제 계산을 쓰는 조건: `HRUM_MAPPING_VERIFIED=true` **그리고** `MANSE_PUBLIC_ENABLED=true` (GET /api/manse 의 `screen: "live"`) **그리고** 그 요청의 서버 응답이 `status: "calculated"`(자체 점검 모두 통과)
+
+## 실제 호출 검증 기록
+| 일시 | 사례 | 결과 |
+|---|---|---|
+| 2026-11-05 | 기본 4건 (양력 2 · 시각 모름 1 · 음력 평달 1) | HTTP 200 4/4 · 원국 기준값 4/4 · 한글 표기 4/4 · 오행 개수 4/4 · 시각 모름 시주 null · 음력 변환 확인 (사용자 실행, /check/manse) |
+| 대기 | 천간 십신 표준 규칙 대조 | 4건 실행 당시엔 점검 항목이 없었음 → 다음 실행에서 확인 |
+| 대기 | 추가 6건 (입춘 전/후 · 자시 · 윤달 · 없는 윤달 · 서머타임) | /check/manse 3단계 |
+
+## 화면 연결 구조
+```
+채팅 결과 카드 · 전체 화면 · 리포트(my) · 무료 요약 카드
+  └ resultFor(profile)  ← features/chat/consultation.ts
+      └ getLiveEntry(profile) ← features/saju/live.ts (브라우저 메모리)
+           calculated → 실제 원국 + liveExtras(십신 · 계산 기준)  → resultStatus "calculated"
+           그 밖(sample 모드 · 계산 중 · 실패 · 윤달 모름 · unverified) → 데모 사주 + '샘플' 표시 (+ 이유)
+```
+- 브라우저는 `GET /api/manse` 의 `screen` 만 보고, `live` 일 때만 `POST /api/manse` (키 · 토큰 없음)
+- 실제 계산일 때 카드: '만세력' 알약 · '운결 결과' · 십신 줄 · 근거 문구(HRUM 계산 · 표준시 · 전통 자시 · 일간 해석은 운결 해설표)
+- 리포트: 사주 칸 '실제 계산', 대운 · 세운 · 월운 관계 · 두 사람 원국 비교는 계속 '미연결/미확정'
+- 사주 기반 참고 MBTI: 실제 계산이어도 '운결 비유 분류(규칙 확정 전 시안) · 실제 MBTI 산출 아님'
+
+## 공개 사용 보호 (과금 방지)
+| 단계 | 누가 계산할 수 있나 |
+|---|---|
+| 검증 전 (VERIFIED 없음) | 확인 토큰(X-Manse-Check-Token) 요청만 |
+| 검증 후 · 공개 전 (VERIFIED=true, PUBLIC 없음) | 확인 토큰 요청만 (공개 요청 403 PUBLIC_DISABLED) |
+| 공개 (VERIFIED=true + PUBLIC=true) | 같은 사이트 브라우저(Origin 필수, Sec-Fetch-Site same-origin) · IP당 분당 3 · IP당 하루 `MANSE_IP_DAILY_LIMIT` · 인스턴스 하루 `MANSE_DAILY_BUDGET` |
+- 한계: 서버리스 인스턴스 메모리 기준이라 인스턴스가 여럿이면 합산되지 않음, Origin 은 curl 로 꾸밀 수 있음 → **최종 상한은 HRUM 콘솔 '요청 제한'(하루 횟수)**. 공개 전 공유 저장소(예: Vercel KV / Upstash) 카운터 · 봇 차단(Turnstile 등) 도입 권장
 
 ## 근거 문서 (2026-11-05 확인)
 - 공식 문서 https://hrum.ai/docs.html (만세력 API 절) · 시작 가이드 https://hrum.ai/getting-started.html
@@ -32,7 +61,7 @@ HRUM 이 직접 처리 (공식 문서): 절기 기준 원국 · 한국 서머타
 | `data.wonkuk.day.stemHanja` | `ManseResult.dayMaster` | 일간 |
 | `data.wonkuk.hour === null` + `data.birthHour.known === false` | 시주 비움 · `hourKnown:false` · `birthHourKnown:false` | 공식 안내대로 `birthHour.known` 으로 판별 (`excludedFields` 안 씀) |
 | `….ohaeng` (목화토금수) | `calculation.pillars[].ohaeng` | 제공자 문자열 그대로 보관 |
-| `….stemSipsin` · `….branchSipsin` (10종) | `calculation.pillars[].stemSipsin` · `branchSipsin` | 그대로 보관 (일간 자리 표기는 문서에 없어 해석 안 함) |
+| `….stemSipsin` · `….branchSipsin` (10종) | `calculation.pillars[].stemSipsin` · `branchSipsin` → 카드 '십신' 줄 | 그대로 표시. 일간 자리는 '일간'. 천간 십신은 운결 표준 규칙(생극 + 음양)으로 따로 계산해 대조 → `checks.stemSipsinMatches`, 이름이 10종 밖이면 `sipsinNamesKnown:false` (둘 중 하나라도 어긋나면 calculated 안 됨). 지지 십신은 학파 차이로 대조하지 않음 |
 | `data.ohaengBalance {목,화,토,금,수}` | `calculation.ohaengBalance {wood,fire,earth,metal,water}` | 운결이 글자로 센 개수와 비교 → `verification.checks.ohaengBalanceMatches` |
 | `data.trueSolarTime` | `calculation.trueSolarTimeApplied` | null 이면 보정 안 함 |
 | `data.lunarInput` | `calculation.lunarConverted` | 있는지만 (세부 필드 미확인) |

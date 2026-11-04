@@ -126,6 +126,29 @@ export function ManseTable({ r }: { r: ReadingResult }) {
             </td>
           ))}
         </tr>
+        {r.liveExtras && (
+          // 실제 계산일 때만: 기둥별 십신 (천간/지지, HRUM 값) — 일간 자리는 '일간'
+          <tr data-row="sipsin">
+            <th scope="row" className="font-serif font-semibold" style={{ color: C.burgundy, background: "rgb(243 226 216 / 0.7)", borderTop: cellBorder, fontSize: "0.98em", height: "2.5em" }}>
+              십신
+            </th>
+            {pillars.map((p) => {
+              const tg = r.liveExtras!.tenGods.find((t) => t.key === p.key);
+              return (
+                <td key={p.key} style={{ borderTop: cellBorder, borderLeft: cellBorder, fontSize: "max(0.78em, 10px)", lineHeight: 1.3, color: C.ink, wordBreak: "keep-all" }}>
+                  {p.stem ? (
+                    <>
+                      <span className="block">{p.key === "day" ? "일간" : (tg?.stem ?? "–")}</span>
+                      <span className="block" style={{ color: C.soft }}>{tg?.branch ?? "–"}</span>
+                    </>
+                  ) : (
+                    <span style={{ color: C.soft }}>–</span>
+                  )}
+                </td>
+              );
+            })}
+          </tr>
+        )}
         <tr>
           <th scope="row" className="font-serif font-semibold" style={{ color: C.burgundy, background: "rgb(243 226 216 / 0.7)", borderTop: cellBorder, fontSize: "0.98em", height: "2.6em" }}>
             의미
@@ -154,9 +177,7 @@ export function ManseCard({ r, mode, titleId, action }: CardProps) {
       footnote={
         isDemo(r)
           ? `※ 본 카드는 화면 구성을 보여드리기 위한 샘플 결과로, 입력하신 생년월일로 계산한 결과가 아닙니다. ${demoBasis(r)}${r.manseResult.hourKnown ? "" : " 태어난 시간을 모른다고 하셔서 시주는 미확정으로 두었어요."}`
-          : r.manseResult.hourKnown
-            ? undefined
-            : "※ 태어난 시간을 몰라 시주는 미확정으로 두었어요."
+          : `※ 실제 만세력 계산 · ${r.liveExtras?.basis[0] ?? "입력하신 생년월일로 계산한 원국이에요."} ${r.liveExtras?.basis[1] ?? ""} 십신은 HRUM 값이에요.${r.manseResult.hourKnown ? "" : " 태어난 시간을 몰라 시주는 비워 두었어요."}`
       }
     >
       {/* 공유 이미지에는 만세력 표를 넣지 않음 — 생년월일을 짐작할 수 있는 정보 */}
@@ -266,7 +287,7 @@ export function ElementsCard({ r, mode, titleId, action }: CardProps) {
       action={action}
       footnote={
         <>
-          {isDemo(r) ? `※ 샘플 데이터로 분석된 예시입니다. ${demoBasis(r)}` : ""}
+          {isDemo(r) ? `※ 샘플 데이터로 분석된 예시입니다. ${demoBasis(r)}` : `※ 실제 원국 ${r.fiveElements.basis}글자의 오행을 같은 무게로 센 개수예요.`}
           <span className="block">비율 기준 · {e.method}</span>
           {mode !== "chat" && <span className="block">{e.limits.join(" ")}</span>}
         </>
@@ -312,7 +333,7 @@ export function InnateCard({ r, mode, titleId, action }: CardProps) {
       action={action}
       footnote={
         <>
-          {sampleNote(r, `샘플 분석 결과입니다. ${demoBasis(r)}`)} 참고 MBTI는 비유일 뿐, 사주로 MBTI를 산출할 수는 없어요.
+          {isDemo(r) ? sampleNote(r, `샘플 분석 결과입니다. ${demoBasis(r)}`) : `※ 일간(일주 천간 ${p.dayMaster.hanja}${p.dayMaster.hangul})은 실제 만세력 계산값이고, 기질 해석은 운결의 일간 10종 해설표에 따른 경향이에요.`} 참고 MBTI는 운결의 비유 분류(규칙 확정 전 시안)일 뿐, 사주로 실제 MBTI를 산출할 수는 없어요.
         </>
       }
     >
@@ -533,7 +554,7 @@ export function InsightCard({ r, mode, titleId, action, onTopic }: CardProps) {
       title={<span style={{ fontSize: "0.78em" }}>{isDemo(r) ? "샘플 사주로 본 키워드" : "지금, 당신에게 중요한 키워드"}</span>}
       titleId={titleId}
       action={action}
-      footnote={sampleNote(r, `샘플 분석 결과입니다. ${demoBasis(r)} ${mixedNote(r)} 미래를 정해 주는 풀이가 아니에요.`)}
+      footnote={isDemo(r) ? sampleNote(r, `샘플 분석 결과입니다. ${demoBasis(r)} ${mixedNote(r)} 미래를 정해 주는 풀이가 아니에요.`) : "※ 실제 원국을 바탕으로 한 운결의 해설이에요. 대운 · 세운은 아직 연결 전이고, 미래를 정해 주는 풀이가 아니에요."}
     >
       <ul className="flex justify-center gap-[0.7em]" aria-label="핵심 키워드">
         {s.keywords.map((k) => (

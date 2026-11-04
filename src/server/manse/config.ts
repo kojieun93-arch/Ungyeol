@@ -26,7 +26,12 @@ export type ManseConfig =
       mappingVerified: boolean;
       /** 확인 전에는 이 토큰(X-Manse-Check-Token)이 있는 요청만 계산 — 공개 주소로 요금이 새지 않게 */
       checkToken: string | null;
+      /** 공개 계산 허용 (검증 완료 + 운영자가 따로 켬). 꺼져 있으면 토큰 요청만 */
+      publicEnabled: boolean;
+      /** 공개 요청 보호: IP당 분당 · IP당 하루 · 인스턴스당 하루 HRUM 호출 상한 */
       rateLimitPerMinute: number;
+      ipDailyLimit: number;
+      dailyBudget: number;
       userAgent: string;
     };
 
@@ -67,7 +72,10 @@ export function readManseConfig(env: Record<string, string | undefined> = proces
     timeoutMs: num(env.HRUM_TIMEOUT_MS, 8000, 1000, 20000),
     mappingVerified,
     checkToken,
+    publicEnabled: mappingVerified && env.MANSE_PUBLIC_ENABLED === "true",
     rateLimitPerMinute: num(env.MANSE_RATE_LIMIT_PER_MINUTE, 10, 1, 120),
+    ipDailyLimit: num(env.MANSE_IP_DAILY_LIMIT, 5, 1, 100),
+    dailyBudget: num(env.MANSE_DAILY_BUDGET, 100, 1, 10000),
     userAgent: "ungyeol/0.2",
   };
 }

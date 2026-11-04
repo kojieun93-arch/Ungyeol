@@ -7,7 +7,7 @@ import { REUNION_ASKS, REUNION_LABELS } from "@/content/products/reunion";
 import { productHref } from "@/features/products/routes";
 import { isProductId } from "@/features/products/types";
 import { reportHrefFor } from "@/features/report/handoff";
-import { SAJU_SAMPLE_MODE } from "@/features/saju/provider";
+import { isSampleMode } from "@/features/saju/live";
 import { isChapterId } from "@/features/report/types";
 import type { AutoNext, ChoiceOption, Consult, Line, NextNode, NodeId, Profile, Prompt, ScriptNode } from "./types";
 
@@ -170,13 +170,15 @@ export const SCRIPT: Record<NodeId, ScriptNode> = {
       const lead = leadLine(c);
       return [
         c.entry === "home" ? "고마워요. 이제 결과를 준비할게요." : "고마워요. 시작하기 전에 한 가지만 말씀드릴게요.",
-        "아직 실제 만세력 계산이 연결되지 않아서, 오늘 보여드리는 사주 내용은 샘플이에요.",
+        isSampleMode()
+          ? "아직 실제 만세력 계산이 연결되지 않아서, 오늘 보여드리는 사주 내용은 샘플이에요."
+          : "입력하신 생년월일로 만세력을 계산해 볼게요. 계산이 안 되면 샘플로 보여드리고 그렇다고 알려 드릴게요.",
         "결과는 카드로 하나씩 보내드릴게요. 카드를 누르면 크게 펼쳐서 자세한 풀이를 볼 수 있어요.",
-        SAJU_SAMPLE_MODE ? "먼저 샘플 사주로 원국이 어떻게 보이는지 보여드릴게요." : "먼저 타고난 사주의 바탕부터 살펴볼게요.",
+        isSampleMode() ? "먼저 샘플 사주로 원국이 어떻게 보이는지 보여드릴게요." : "먼저 사주 원국부터 살펴볼게요.",
         { card: "manse" },
         "사주에는 서로 다른 다섯 가지 기운이 담겨 있어요.",
         { card: "elements" },
-        SAJU_SAMPLE_MODE ? "이 샘플 사주의 기운으로 읽은 예시 기질이에요. 내 사주의 해석은 아니에요." : "이 기운들이 만든 타고난 기질이에요.",
+        isSampleMode() ? "이 샘플 사주의 기운으로 읽은 예시 기질이에요. 내 사주의 해석은 아니에요." : "원국의 일간으로 읽은 기질이에요. 카드 아래에 근거를 적어 두었어요.",
         { card: "innate" },
         p.mbti ? "그럼 지금의 당신을 나타내는 MBTI를 볼게요." : "MBTI를 모르셔도 괜찮아요. 스스로 살펴볼 수 있게 정리해 둘게요.",
         { card: "current" },

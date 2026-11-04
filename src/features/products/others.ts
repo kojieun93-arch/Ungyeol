@@ -34,7 +34,7 @@ function ctx(s: ProductSource) {
 const slot = (s: ProductSource, what: string, extra = ""): DataSlot =>
   isDemo(s.payload)
     ? { status: "demo", label: "샘플 사주 · 계산 미연결", detail: `${s.payload.demo?.label ?? "샘플 사주"} 기준의 예시예요. 입력하신 생년월일로 계산한 ${what}가 아니에요.${extra}` }
-    : { status: "demo", label: "계산 결과", detail: extra.trim() };
+    : { status: "calculated", label: "실제 만세력 계산 (HRUM)", detail: `입력하신 생년월일로 계산한 원국이에요. ${what} 해석은 운결 해설표 기준이에요.${extra}` };
 
 const many = (n: number) => (n === 0 ? "보이지 않아요" : n >= 3 ? `${n}글자로 두드러져요` : `${n}글자 있어요`);
 

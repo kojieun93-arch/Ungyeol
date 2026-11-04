@@ -220,7 +220,7 @@ export function buildInsight(manse: ManseResult, p: SajuPersonality, c: SajuMBTI
 export function buildResultPayload(
   manse: ManseResult,
   profile: Pick<ConsultationProfile, "mbti" | "birth">,
-  opts: { publicSample?: boolean } = {},
+  opts: { publicSample?: boolean; liveExtras?: ResultPayload["liveExtras"] } = {},
 ): ResultPayload {
   const mbti = profile.mbti;
   const sajuPersonality = buildPersonality(manse);
@@ -239,5 +239,7 @@ export function buildResultPayload(
     selfReportedMBTI: buildCurrent(mbti),
     comparison,
     integratedInsight: buildInsight(manse, sajuPersonality, comparison),
+    // 실제 계산 결과(manse.isSample=false)에만 붙임
+    liveExtras: !manse.isSample && resultStatus === "calculated" ? (opts.liveExtras ?? null) : null,
   };
 }

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { BRANCHES, ELEMENTS, ELEMENT_ORDER, STEMS } from "@/features/saju/elements";
 import { countElements } from "@/features/saju/provider";
+import { SIPSIN_NAMES, stemSipsin } from "@/features/saju/relations";
 import type { ElementKey, ManseResult, Pillar, PillarKey } from "@/features/saju/types";
 import type { ManseConfig } from "./config";
 import type { ManseRequest } from "./input";
@@ -58,7 +59,14 @@ export type HrumCalculation = {
   /** 제공자 경고 코드 (예: UNKNOWN_TIMEZONE) */
   providerWarnings: string[];
   /** 운결 쪽 자체 점검 (계산값을 바꾸지 않음) */
-  checks: { ohaengBalanceMatches: boolean | null; hangulMatches: boolean };
+  checks: {
+    ohaengBalanceMatches: boolean | null;
+    hangulMatches: boolean;
+    /** 일간 외 천간의 십신이 표준 규칙과 같은지 (값이 없으면 null). 일간 자리 · 지지 십신은 비교하지 않음 */
+    stemSipsinMatches: boolean | null;
+    /** 십신 값이 공식 10종 이름 안에 있는지 */
+    sipsinNamesKnown: boolean;
+  };
 };
 
 export function buildHrumBody(v: ManseRequest): Record<string, unknown> {
@@ -134,6 +142,13 @@ export function parseHrumResponse(json: unknown, timeSent: boolean): HrumCalcula
   }
   const ohaengBalanceMatches = ohaengBalance ? ELEMENT_ORDER.every((k) => manse.elements.counts.find((c) => c.key === k)!.count === ohaengBalance![k]) : null;
 
+  // 천간 십신: 운결 표준 규칙으로 따로 계산해 대조 (제공자 값은 바꾸지 않음)
+  const dm = manse.dayMaster;
+  const stemPairs = extras.filter((e) => e.key !== "day" && e.stemSipsin).map((e) => [e.stemSipsin, stemSipsin(dm, pillars.find((p) => p.key === e.key)!.stem!)]);
+  const stemSipsinMatches = stemPairs.length ? stemPairs.every(([a, b]) => a === b) : null;
+  const names = extras.flatMap((e) => [e.key === "day" ? null : e.stemSipsin, e.branchSipsin]).filter((x): x is string => !!x);
+  const sipsinNamesKnown = names.every((n) => SIPSIN_NAMES.includes(n));
+
   const warnings = Array.isArray(data.warnings) ? (data.warnings as unknown[]).map((w) => str((w as { code?: unknown })?.code)).filter((x): x is string => !!x) : [];
 
   return {
@@ -144,7 +159,7 @@ export function parseHrumResponse(json: unknown, timeSent: boolean): HrumCalcula
     trueSolarTimeApplied: data.trueSolarTime !== null && data.trueSolarTime !== undefined,
     lunarConverted: data.lunarInput !== null && data.lunarInput !== undefined,
     providerWarnings: warnings,
-    checks: { ohaengBalanceMatches, hangulMatches },
+    checks: { ohaengBalanceMatches, hangulMatches, stemSipsinMatches, sipsinNamesKnown },
   };
 }
 

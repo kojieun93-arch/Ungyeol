@@ -54,7 +54,7 @@ export async function calculateManse(v: ManseRequest, cfg: ManseConfig = readMan
     if (cache.size > 500) cache.delete(cache.keys().next().value as string);
   }
   // 자체 점검이 어긋나면 검증 완료 설정이어도 calculated 로 내보내지 않음
-  const consistent = calc.checks.hangulMatches && calc.checks.ohaengBalanceMatches !== false;
+  const consistent = calc.checks.hangulMatches && calc.checks.ohaengBalanceMatches !== false && calc.checks.stemSipsinMatches !== false && calc.checks.sipsinNamesKnown;
   return {
     status: cfg.mappingVerified && consistent ? "calculated" : "unverified",
     source: "hrum",

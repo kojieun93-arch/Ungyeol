@@ -14,7 +14,7 @@ import CHECK from "@/content/manse-check-cases.json";
    - 이 화면은 사용자 화면(샘플)을 바꾸지 않음
    ────────────────────────────────────────────────────────── */
 
-type Case = (typeof CHECK.cases)[number];
+type Case = { id: string; name: string; body: { calendar: string; leap: boolean | null; birth: { y: number; m: number; d: number }; time: { h: number; m: number } | null; gender: string }; expect?: Record<string, string | null>; expectError?: string; topic?: string; basis?: string };
 type PillarKey = "year" | "month" | "day" | "hour";
 const KEYS: PillarKey[] = ["year", "month", "day", "hour"];
 const LABEL: Record<PillarKey, string> = { year: "년주", month: "월주", day: "일주", hour: "시주" };
@@ -32,7 +32,7 @@ type Api = {
   };
   billing?: { upstreamCalled: boolean; replayed: boolean | null; estimatedChargeKRW: number; basis: string };
   warnings?: { provider: string[]; ungyeol: { code: string }[] };
-  verification?: { mappingVerified: boolean; checks: { ohaengBalanceMatches: boolean | null; hangulMatches: boolean } };
+  verification?: { mappingVerified: boolean; checks: { ohaengBalanceMatches: boolean | null; hangulMatches: boolean; stemSipsinMatches?: boolean | null; sipsinNamesKnown?: boolean } };
   error?: { code: string; message: string; upstreamStatus?: number; upstreamCode?: string | null };
 };
 
@@ -51,6 +51,14 @@ type Result = {
 
 function analyze(c: Case, http: number, data: Api | null): Result {
   const note: string[] = [];
+  // 오류가 기대되는 사례 (예: 없는 윤달 → INVALID_LUNAR_DATE, 과금 없음)
+  if (c.expectError) {
+    const got = data?.error?.code ?? null;
+    const pass = got === c.expectError;
+    if (!pass) note.push(`기대한 오류 ${c.expectError} 와 다름 (받은 값 ${got ?? `HTTP ${http}`})`);
+    const none = { year: null, month: null, day: null, hour: null } as Record<PillarKey, string | null>;
+    return { id: c.id, http, ok: pass, formatOk: false, pillars: none, match: { year: pass, month: pass, day: pass, hour: pass }, allMatch: pass, extraOk: pass, data, note };
+  }
   const list = data?.calculation?.manse?.pillars ?? [];
   const pillars = Object.fromEntries(KEYS.map((k) => {
     const p = list.find((x) => x.key === k);
@@ -58,13 +66,15 @@ function analyze(c: Case, http: number, data: Api | null): Result {
   })) as Record<PillarKey, string | null>;
   const formatOk = http === 200 && (data?.status === "unverified" || data?.status === "calculated") && list.length === 4 && !!data?.verification && !!data?.billing;
   if (http === 200 && !formatOk) note.push("응답 형식이 예상과 달라요");
-  const exp = c.expect as Record<PillarKey, string | null>;
+  const exp = (c.expect ?? {}) as Record<PillarKey, string | null>;
   const match = Object.fromEntries(KEYS.map((k) => [k, pillars[k] === exp[k]])) as Record<PillarKey, boolean>;
   const allMatch = formatOk && KEYS.every((k) => match[k]);
   // 사례별 추가 점검: 시각 모름 → birthHourKnown false · 음력 → lunarConverted true · 오행 개수 일치 · 한글/한자 일치
   const calc = data?.calculation;
   const checks = data?.verification?.checks;
-  let extraOk = formatOk && checks?.hangulMatches === true && checks?.ohaengBalanceMatches !== false;
+  let extraOk = formatOk && checks?.hangulMatches === true && checks?.ohaengBalanceMatches !== false && checks?.stemSipsinMatches !== false && checks?.sipsinNamesKnown !== false;
+  if (formatOk && checks?.stemSipsinMatches === false) note.push("천간 십신이 표준 규칙(음양 · 생극)과 달라요");
+  if (formatOk && checks?.sipsinNamesKnown === false) note.push("십신 이름이 공식 10종 밖이에요");
   if (formatOk && c.body.time === null && calc?.birthHourKnown !== false) (extraOk = false), note.push("시각 모름인데 birthHour.known 이 false 가 아니에요");
   if (formatOk && c.body.calendar === "lunar" && calc?.lunarConverted !== true) (extraOk = false), note.push("음력인데 lunarInput 이 없어요");
   if (formatOk && checks?.ohaengBalanceMatches === null) note.push("ohaengBalance 가 응답에 없어요");
@@ -72,7 +82,8 @@ function analyze(c: Case, http: number, data: Api | null): Result {
   return { id: c.id, http, ok: http === 200, formatOk, pillars, match, allMatch, extraOk, data, note };
 }
 
-const cases = CHECK.cases;
+const cases = CHECK.cases as Case[];
+const extra = CHECK.extra as Case[];
 
 export function ManseCheck() {
   const [token, setToken] = useState("");
@@ -132,6 +143,15 @@ export function ManseCheck() {
   const first = results.c1;
   const gate = !!first && first.allMatch && first.extraOk && !stopped;
   const done = cases.filter((c) => results[c.id]).length;
+  // 3단계(운영 전 추가 사례): 기본 4건이 모두 맞은 뒤에만, 사례마다 따로 한 번씩
+  const gate3 = cases.every((c) => results[c.id]?.allMatch && results[c.id]?.extraOk) && !stopped;
+  const runOne = async (c: Case) => {
+    if (busy || results[c.id] || !gate3) return;
+    setBusy(true);
+    const r = await run(c);
+    if (!r.ok && !c.expectError && r.data?.error && STOP.has(r.data.error.code)) setStopped(r.data.error.code);
+    setBusy(false);
+  };
 
   // 결과 요약 — 토큰 · 키 없음 (가상의 시험 생년월일과 계산값만)
   const summary = JSON.stringify(
@@ -141,14 +161,15 @@ export function ManseCheck() {
       server: server ? { configured: server.configured, mappingVerified: server.mappingVerified, screen: server.screen } : null,
       counts,
       stopped,
-      results: cases.filter((c) => results[c.id]).map((c) => {
+      results: [...cases, ...extra].filter((c) => results[c.id]).map((c) => {
         const r = results[c.id];
         return {
           id: c.id,
           http: r.http,
           status: r.data?.status ?? null,
           pillars: r.pillars,
-          expect: c.expect,
+          expect: c.expect ?? null,
+          expectError: c.expectError ?? null,
           match: r.allMatch,
           extraOk: r.extraOk,
           sipsin: r.data?.calculation?.pillars?.map((p) => `${p.key}:${p.stemSipsin ?? "-"}/${p.branchSipsin ?? "-"}/${p.ohaeng ?? "-"}`) ?? null,
@@ -260,6 +281,26 @@ export function ManseCheck() {
           <p className="mt-2 text-[13px] leading-[1.55] text-[#7b6266] [word-break:keep-all]">공식 요금(성공 1건 ₩50) 기준 추정이에요. 실패 응답은 과금되지 않아요. 실제 차감액은 HRUM 콘솔의 사용량 화면에서 확인해 주세요.</p>
         </Sheet>
 
+        <Sheet className="mt-8 px-4 pt-7 pb-5">
+          <h2 className="font-serif text-[17px] font-semibold text-[#4a1a2c]">3단계 · 운영 전 추가 사례</h2>
+          <p className="mt-1 text-[14px] leading-[1.55] text-[#6b5459] [word-break:keep-all]">
+            {gate3 ? "절기 경계 · 자시 · 윤달 · 서머타임을 하나씩 확인해요. 사례마다 한 번만 계산해요 (오류 사례는 과금 없음)." : "1 · 2단계 4건이 모두 기준과 맞으면 열려요."}
+          </p>
+          <ul className="mt-3 space-y-3">
+            {extra.map((c) => (
+              <li key={c.id} className="rounded-xl bg-white/60 px-3.5 py-3 shadow-[0_0_0_1px_#e6cdbd]">
+                <p className="text-[13px] font-semibold text-[#9a7647]">{c.topic}</p>
+                <p className="text-[14.5px] text-[#3a2229] [word-break:keep-all]">{c.name}</p>
+                <p className="mt-0.5 text-[13px] leading-[1.5] text-[#7b6266] [word-break:keep-all]">기준 근거 · {c.basis}</p>
+                <button type="button" onClick={() => runOne(c)} disabled={!gate3 || busy || !!results[c.id]} className="mt-2 min-h-11 w-full rounded-full text-[14px] font-medium text-[#6e2a40] shadow-[inset_0_0_0_1.5px_#c9a27a] disabled:opacity-40" data-extra={c.id}>
+                  {results[c.id] ? "계산 완료" : c.expectError ? "오류 응답 확인 (과금 없음)" : "이 사례 계산 (₩50)"}
+                </button>
+                {results[c.id] && <CaseView c={c} r={results[c.id]} />}
+              </li>
+            ))}
+          </ul>
+        </Sheet>
+
         {done > 0 && (
           <Sheet className="mt-8 px-4 pt-7 pb-5">
             <h2 className="font-serif text-[17px] font-semibold text-[#4a1a2c]">결과 공유</h2>
@@ -277,8 +318,17 @@ export function ManseCheck() {
 }
 
 function CaseView({ c, r }: { c: Case; r: Result }) {
-  const exp = c.expect as Record<PillarKey, string | null>;
+  const exp = (c.expect ?? {}) as Record<PillarKey, string | null>;
   const d = r.data;
+  if (c.expectError)
+    return (
+      <div className="mt-3 rounded-xl bg-white/70 px-3.5 py-3 text-[14.5px] shadow-[0_0_0_1px_#e6cdbd]" data-case={c.id} data-result={r.allMatch ? "pass" : "check"}>
+        <p className="font-semibold text-[#4a1a2c]">{r.allMatch ? "✓ 기대한 오류" : "△ 확인 필요"} · HTTP {r.http} · {d?.error?.code ?? "-"}</p>
+        {r.note.map((n) => (
+          <p key={n} className="mt-1 text-[13px] text-[#8a3b2e]">· {n}</p>
+        ))}
+      </div>
+    );
   return (
     <div className="mt-4 rounded-xl bg-white/70 px-3.5 py-3 text-[14.5px] shadow-[0_0_0_1px_#e6cdbd]" data-case={c.id} data-result={r.allMatch && r.extraOk ? "pass" : r.ok ? "check" : "error"}>
       <p className="font-semibold text-[#4a1a2c]">
@@ -314,6 +364,11 @@ function CaseView({ c, r }: { c: Case; r: Result }) {
       {d?.calculation?.ohaengBalance && (
         <p className="mt-1 text-[13px]">
           오행 개수: {Object.entries(d.calculation.ohaengBalance).map(([k, v]) => `${k} ${v}`).join(" · ")} · 운결 계산과 {d.verification?.checks.ohaengBalanceMatches ? "일치" : "다름"}
+        </p>
+      )}
+      {d?.verification && (
+        <p className="mt-1 text-[13px]">
+          천간 십신 표준 규칙과 {d.verification.checks.stemSipsinMatches === null || d.verification.checks.stemSipsinMatches === undefined ? "비교 값 없음" : d.verification.checks.stemSipsinMatches ? "일치" : "다름"} · 십신 이름 {d.verification.checks.sipsinNamesKnown === false ? "공식 10종 밖 있음" : "공식 10종"}
         </p>
       )}
       {d?.warnings && (d.warnings.provider.length > 0 || d.warnings.ungyeol.length > 0) && <p className="mt-1 text-[13px]">경고: {[...d.warnings.provider, ...d.warnings.ungyeol.map((w) => w.code)].join(", ")}</p>}

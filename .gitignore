@@ -9,3 +9,4 @@ next-env.d.ts
 
 # 만세력 검증 결과 (로컬)
 manse-check-result.json
+.tests

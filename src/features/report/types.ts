@@ -20,7 +20,8 @@ export const isReportId = (v: string): v is ReportId => v === "sample" || v === 
 
 /** 실제 분석 데이터가 들어올 자리의 상태 — 계산되지 않은 것을 계산된 것처럼 보이지 않게 */
 export type DataSlot = {
-  status: "demo" | "unconnected" | "needs-input";
+  /** calculated = 실제 만세력 계산값을 쓴 칸 (검증된 HRUM 결과일 때만) */
+  status: "demo" | "calculated" | "unconnected" | "needs-input";
   label: string;
   detail: string;
   /** 연결에 필요한 것 */

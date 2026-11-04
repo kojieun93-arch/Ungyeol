@@ -204,7 +204,7 @@ export function ReportReader({ reportId, chapterId = null }: { reportId: ReportI
             <p className="mt-2 font-serif text-[13px] tracking-[0.18em] text-[#e8c9ac]">{report.meta.subtitle}</p>
             <h1 className="mt-2 font-serif text-[1.75rem] font-semibold tracking-[-0.02em]">{report.meta.title}</h1>
             <div className="mt-3 flex flex-wrap justify-center gap-1.5 text-[12px]">
-              <span className="rounded-full bg-[#974d5e] px-2.5 py-1 font-semibold">{isDemo(r) ? "샘플 리포트 · 데모 사주" : "계산 결과"}</span>
+              <span className="rounded-full bg-[#974d5e] px-2.5 py-1 font-semibold">{isDemo(r) ? "샘플 리포트 · 데모 사주" : "실제 만세력 계산"}</span>
               <span className="rounded-full px-2.5 py-1 shadow-[inset_0_0_0_1px_rgb(232_201_172/0.5)]">{reportId === "sample" ? "공개 샘플 (예시 MBTI " + (report.meta.basis.mbti ?? "") + ")" : "내 상담 기준"}</span>
               <span className="rounded-full px-2.5 py-1 shadow-[inset_0_0_0_1px_rgb(232_201_172/0.5)]">{access.mode === "demo-full" ? "데모 체험 · 전체 보기" : "공개 챕터 01 · 04"}</span>
             </div>

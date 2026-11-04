@@ -4,8 +4,7 @@ import { productFreeSummary } from "@/features/products/build";
 import { productHref } from "@/features/products/routes";
 import { isProductId } from "@/features/products/types";
 import type { AdvisorCard, Profile } from "@/features/chat/types";
-import { getSampleManse } from "@/features/saju/provider";
-import { buildResultPayload } from "@/features/saju/reading";
+import { resultFor } from "@/features/chat/consultation";
 import { CardLabel, ChatCard, PLUM, SampleBadge } from "./ChatCard";
 
 /**
@@ -18,7 +17,8 @@ export function ProductCard({ id, profile, context, stale = false }: { id: strin
   const P = PRODUCTS[id];
   const lines = productFreeSummary(id, {
     reportId: "my",
-    payload: buildResultPayload(getSampleManse(profile.time !== null && profile.time !== undefined), { mbti: profile.mbti ?? null, birth: profile.birth ?? null }),
+    payload: resultFor(profile), // 검증된 실제 계산이 있을 때만 실제 원국
+
     mbti: profile.mbti ?? null,
     timeUnknown: profile.time === null,
     partner: profile.partner,

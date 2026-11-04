@@ -44,12 +44,15 @@ export function ReportSection({ s }: { s: Sec }) {
 
 /** 데이터 상태 — 샘플 · 미연결 · 정보 필요(미확정) */
 export function SlotBadge({ slot }: { slot: DataSlot }) {
-  const tone = slot.status === "demo" ? "bg-[#974d5e]/10 text-[#6e2a40] shadow-[inset_0_0_0_1px_rgb(151_77_94/0.3)]" : "bg-[#efe3d0] text-[#6b4f2a] shadow-[inset_0_0_0_1px_rgb(155_118_71/0.4)]";
+  const tone =
+    slot.status === "demo" ? "bg-[#974d5e]/10 text-[#6e2a40] shadow-[inset_0_0_0_1px_rgb(151_77_94/0.3)]"
+    : slot.status === "calculated" ? "bg-[#e3eadf] text-[#3f5a44] shadow-[inset_0_0_0_1px_rgb(95_125_99/0.4)]"
+    : "bg-[#efe3d0] text-[#6b4f2a] shadow-[inset_0_0_0_1px_rgb(155_118_71/0.4)]";
   return (
     <div role="note" className={`reveal rounded-xl px-3.5 py-3 text-[13.5px] leading-[1.6] [word-break:keep-all] ${tone}`} data-slot={slot.status}>
       <p className="flex items-center gap-1.5 font-semibold">
-        <span aria-hidden className={`size-2 rounded-full ${slot.status === "demo" ? "bg-[#974d5e]" : "bg-[#9a7647]"}`} />
-        {slot.status === "demo" ? "샘플" : slot.status === "unconnected" ? "미연결" : "정보 필요"} · {slot.label}
+        <span aria-hidden className={`size-2 rounded-full ${slot.status === "demo" ? "bg-[#974d5e]" : slot.status === "calculated" ? "bg-[#5f7d63]" : "bg-[#9a7647]"}`} />
+        {slot.status === "demo" ? "샘플" : slot.status === "calculated" ? "실제 계산" : slot.status === "unconnected" ? "미연결" : "정보 필요"} · {slot.label}
       </p>
       {slot.detail && <p className="mt-1">{slot.detail}</p>}
       {slot.needs && slot.needs.length > 0 && <p className="mt-1 text-[13px] opacity-85">필요한 것 · {slot.needs.join(" · ")}</p>}

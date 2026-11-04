@@ -3,6 +3,7 @@ import { MBTI_TYPES, type Profile } from "@/features/chat/types";
 import { BRANCHES, ELEMENTS, ELEMENT_ORDER, STEMS, elementLabel } from "@/features/saju/elements";
 import { AXIS, RELATION_STYLE, isLetter } from "@/features/saju/mbti";
 import { DAY_MASTER_TRAITS } from "@/features/saju/personality";
+import { getLiveEntry } from "@/features/saju/live";
 import { getSampleManse } from "@/features/saju/provider";
 import { buildResultPayload } from "@/features/saju/reading";
 import { elementOf, relationTo, type GodGroup } from "@/features/saju/relations";
@@ -50,7 +51,7 @@ const ctx = (r: ResultPayload) => {
 const demoSlot = (r: ResultPayload, what: string): DataSlot =>
   isDemo(r)
     ? { status: "demo", label: "데모 사주 · 계산 미연결", detail: `${r.demo?.label ?? "샘플 사주"} 기준의 예시예요. 만세력 계산이 연결되면 입력하신 정보로 계산한 ${what}가 이 자리에 들어와요.` }
-    : { status: "demo", label: "계산 결과", detail: "" };
+    : { status: "calculated", label: "실제 만세력 계산 (HRUM)", detail: `입력하신 생년월일로 계산한 원국이에요. ${what} 해석은 운결 해설표 기준이에요.` };
 
 const unconnected = (label: string, detail: string, needs: string[]): DataSlot => ({ status: "unconnected", label, detail, needs });
 
@@ -444,6 +445,10 @@ export function buildSampleReport(): Report {
 export function buildMyReport(p: Profile, topic: string): Report | null {
   if (!p.birth) return null;
   const input = inputFromProfile(p, topic);
-  const payload = buildResultPayload(getSampleManse(!input.timeUnknown && p.time !== undefined), { mbti: input.mbti, birth: p.birth });
+  const live = getLiveEntry(p);
+  const payload =
+    live?.phase === "calculated"
+      ? buildResultPayload(live.manse, { mbti: input.mbti, birth: p.birth }, { liveExtras: live.extras })
+      : buildResultPayload(getSampleManse(!input.timeUnknown && p.time !== undefined), { mbti: input.mbti, birth: p.birth });
   return buildReport("my", payload, input);
 }

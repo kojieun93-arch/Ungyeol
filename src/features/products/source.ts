@@ -1,6 +1,7 @@
 import type { ChatState } from "@/features/chat/reducer";
 import { RESULT_CARDS, type Profile, type ReunionInfo } from "@/features/chat/types";
 import type { ReportId } from "@/features/report/types";
+import { getLiveEntry } from "@/features/saju/live";
 import { getSampleManse } from "@/features/saju/provider";
 import { buildResultPayload } from "@/features/saju/reading";
 import type { ResultPayload } from "@/features/saju/types";
@@ -68,7 +69,12 @@ export function sourceFromChat(state: ChatState, productId: ProductId, now = new
   return {
     source: {
       reportId: "my",
-      payload: buildResultPayload(getSampleManse(p.time !== null && p.time !== undefined), { mbti: p.mbti ?? null, birth: p.birth }),
+      payload: (() => {
+        const live = getLiveEntry(p); // 검증된 실제 계산이 있을 때만 실제 원국
+        return live?.phase === "calculated"
+          ? buildResultPayload(live.manse, { mbti: p.mbti ?? null, birth: p.birth }, { liveExtras: live.extras })
+          : buildResultPayload(getSampleManse(p.time !== null && p.time !== undefined), { mbti: p.mbti ?? null, birth: p.birth });
+      })(),
       mbti: p.mbti ?? null,
       timeUnknown: p.time === null,
       partner: p.partner,

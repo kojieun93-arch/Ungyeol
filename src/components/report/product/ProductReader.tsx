@@ -139,7 +139,7 @@ export function ProductReader({ productId, reportId, chapterId = null }: { produ
             subtitle="사주 × MBTI 주제별 리포트"
             title={P.title}
             badges={[
-              { text: isDemo(r) ? "샘플 리포트 · 데모 사주" : "계산 결과", strong: true },
+              { text: isDemo(r) ? "샘플 리포트 · 데모 사주" : "실제 만세력 계산", strong: true },
               { text: reportId === "sample" ? "공개 샘플 · 예시 상황" : "내 상담 기준" },
               { text: access.mode === "demo-full" ? "데모 체험 · 전체 보기" : `공개 챕터 ${free.join(" · ")}` },
               ...(P.previewAvailability.written === "structure" ? [{ text: "본문 준비 중 · 구조 공개" }] : []),

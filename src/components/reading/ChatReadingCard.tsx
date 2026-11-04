@@ -3,6 +3,7 @@
 import { useMemo, useRef } from "react";
 import { resultFor } from "@/features/chat/consultation";
 import type { Profile } from "@/features/chat/types";
+import { useLive } from "@/features/saju/live";
 import type { ReadingResult } from "@/features/saju/types";
 import { CARD_COMPONENT, READING_META, type ReadingKind } from "./cards";
 import { useReadingActions } from "./useReadingViewer";
@@ -14,7 +15,10 @@ export function readingForProfile(profile: Profile): ReadingResult {
 
 /** 채팅 안 요약 카드 — 카드를 누르거나 오른쪽 위 확대 버튼으로 전체 화면 */
 export function ChatReadingCard({ kind, profile, stale = false }: { kind: ReadingKind; profile: Profile; stale?: boolean }) {
-  const r = useMemo(() => readingForProfile(profile), [profile]);
+  const live = useLive(profile);
+  const r = useMemo(() => resultFor(profile, undefined, live.entry), [profile, live.entry]);
+  // 실제 계산을 쓸 수 있는 상태에서 계산 중이면 샘플을 먼저 보여 주지 않음
+  const waiting = live.mode === "unknown" || (live.mode === "live" && (!live.entry || live.entry.phase === "loading"));
   const actions = useReadingActions();
   const btn = useRef<HTMLButtonElement>(null);
   const Card = CARD_COMPONENT[kind];
@@ -39,6 +43,15 @@ export function ChatReadingCard({ kind, profile, stale = false }: { kind: Readin
     </button>
   );
 
+  if (waiting && !stale)
+    return (
+      <article aria-label={`${title} (계산 중)`} aria-busy="true" className="w-full rounded-[1.26em] bg-chat-advisor px-4 py-5 text-center text-[14px] text-chat-advisor-soft" data-live="loading">
+        만세력을 계산하고 있어요…
+      </article>
+    );
+
+  const fallbackNote = live.entry?.phase === "fallback" ? live.entry.reason : null;
+
   // 정보를 고치기 전의 결과: 흐리게 + 안내, 크게 보기 · 주제 버튼 없음
   if (stale)
     return (
@@ -54,7 +67,12 @@ export function ChatReadingCard({ kind, profile, stale = false }: { kind: Readin
 
   return (
     // 카드 아무 곳이나 눌러도 열림 (키보드는 확대 버튼으로)
-    <article aria-label={title} className="w-full cursor-zoom-in" onClick={() => actions?.open(kind, btn.current)}>
+    <article aria-label={title} className="w-full cursor-zoom-in" onClick={() => actions?.open(kind, btn.current)} data-live={r.resultStatus === "calculated" ? "calculated" : "sample"}>
+      {fallbackNote && kind === "manse" && (
+        <p className="mb-2 rounded-[0.9em] bg-[#2c1720]/80 px-3 py-2 text-[12.5px] leading-snug text-[#f3dcc4]" role="note">
+          {fallbackNote}
+        </p>
+      )}
       <Card r={r} mode="chat" action={expand} onTopic={actions ? (id) => actions.chooseTopic(id) : undefined} />
     </article>
   );

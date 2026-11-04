@@ -3,7 +3,8 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { READING_KINDS, type ReadingKind } from "@/components/reading/cards";
-import { readingForProfile } from "@/components/reading/ChatReadingCard";
+import { resultFor } from "@/features/chat/consultation";
+import { useLive } from "@/features/saju/live";
 import { ReadingViewer } from "@/components/reading/ReadingViewer";
 import { ReadingActionsContext, useReadingViewer, type ReadingActions } from "@/components/reading/useReadingViewer";
 import { TOPICS, type TopicId } from "@/features/saju/topics";
@@ -181,7 +182,8 @@ export function ChatRoom({
       m.kind === "card" && (READING_KINDS as readonly string[]).includes(m.card) && (m.epoch ?? 0) === state.resultEpoch,
   );
   const readingProfile = readingMsgs.at(-1)?.profile ?? null;
-  const reading = useMemo(() => (readingProfile ? readingForProfile(readingProfile) : null), [readingProfile]);
+  const live = useLive(readingProfile); // 결과 화면 전에 /api/manse 상태를 미리 확인 (실제 계산 공개 여부)
+  const reading = useMemo(() => (readingProfile ? resultFor(readingProfile, undefined, live.entry) : null), [readingProfile, live.entry]);
   const kinds = READING_KINDS.filter((k) => readingMsgs.some((m) => m.card === k));
   const viewer = useReadingViewer(reduced);
   const viewerIndex = viewer.kind ? kinds.indexOf(viewer.kind) : -1;

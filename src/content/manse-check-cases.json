@@ -1,9 +1,251 @@
 {
-  "_note": "HRUM 실제 호출 검증 사례 (가상의 생년월일). 기준값: 연·월주 60갑자 · 절기 월(오호둔), 일주 60일 순환(1949-10-01 甲子 · 2000-01-01 戊午 · 1900-01-01 甲戌로 교차 확인), 시주 오서둔 + 시계 시각(진태양시 보정 없음). 절기 경계 · 서머타임 · 자시를 피한 날짜.",
+  "_note": "HRUM 실제 호출 검증 사례 (가상의 생년월일). 기준값: 연·월주 60갑자 · 절기 월(오호둔), 일주 60일 순환(1949-10-01 甲子 · 2000-01-01 戊午 · 1900-01-01 甲戌로 교차 확인), 시주 오서둔 + 시계 시각(진태양시 보정 없음). 절기 경계 · 서머타임 · 자시를 피한 날짜. extra 는 운영 전 추가 검증용 (절기 경계 · 자시 · 윤달 · 서머타임).",
   "cases": [
-    { "id": "c1", "name": "양력 1990-05-15 12:00 남 (공식 예시)", "body": { "calendar": "solar", "leap": null, "birth": { "y": 1990, "m": 5, "d": 15 }, "time": { "h": 12, "m": 0 }, "gender": "male" }, "expect": { "year": "庚午", "month": "辛巳", "day": "庚辰", "hour": "壬午" } },
-    { "id": "c2", "name": "양력 1996-05-17 08:00 여", "body": { "calendar": "solar", "leap": null, "birth": { "y": 1996, "m": 5, "d": 17 }, "time": { "h": 8, "m": 0 }, "gender": "female" }, "expect": { "year": "丙子", "month": "癸巳", "day": "甲寅", "hour": "戊辰" } },
-    { "id": "c3", "name": "양력 1985-10-20 시각 모름 여", "body": { "calendar": "solar", "leap": null, "birth": { "y": 1985, "m": 10, "d": 20 }, "time": null, "gender": "female" }, "expect": { "year": "乙丑", "month": "丙戌", "day": "壬辰", "hour": null } },
-    { "id": "c4", "name": "음력 2024-01-01 평달 10:00 여 (양력 2024-02-10)", "body": { "calendar": "lunar", "leap": false, "birth": { "y": 2024, "m": 1, "d": 1 }, "time": { "h": 10, "m": 0 }, "gender": "female" }, "expect": { "year": "甲辰", "month": "丙寅", "day": "甲辰", "hour": "己巳" } }
+    {
+      "id": "c1",
+      "name": "양력 1990-05-15 12:00 남 (공식 예시)",
+      "body": {
+        "calendar": "solar",
+        "leap": null,
+        "birth": {
+          "y": 1990,
+          "m": 5,
+          "d": 15
+        },
+        "time": {
+          "h": 12,
+          "m": 0
+        },
+        "gender": "male"
+      },
+      "expect": {
+        "year": "庚午",
+        "month": "辛巳",
+        "day": "庚辰",
+        "hour": "壬午"
+      }
+    },
+    {
+      "id": "c2",
+      "name": "양력 1996-05-17 08:00 여",
+      "body": {
+        "calendar": "solar",
+        "leap": null,
+        "birth": {
+          "y": 1996,
+          "m": 5,
+          "d": 17
+        },
+        "time": {
+          "h": 8,
+          "m": 0
+        },
+        "gender": "female"
+      },
+      "expect": {
+        "year": "丙子",
+        "month": "癸巳",
+        "day": "甲寅",
+        "hour": "戊辰"
+      }
+    },
+    {
+      "id": "c3",
+      "name": "양력 1985-10-20 시각 모름 여",
+      "body": {
+        "calendar": "solar",
+        "leap": null,
+        "birth": {
+          "y": 1985,
+          "m": 10,
+          "d": 20
+        },
+        "time": null,
+        "gender": "female"
+      },
+      "expect": {
+        "year": "乙丑",
+        "month": "丙戌",
+        "day": "壬辰",
+        "hour": null
+      }
+    },
+    {
+      "id": "c4",
+      "name": "음력 2024-01-01 평달 10:00 여 (양력 2024-02-10)",
+      "body": {
+        "calendar": "lunar",
+        "leap": false,
+        "birth": {
+          "y": 2024,
+          "m": 1,
+          "d": 1
+        },
+        "time": {
+          "h": 10,
+          "m": 0
+        },
+        "gender": "female"
+      },
+      "expect": {
+        "year": "甲辰",
+        "month": "丙寅",
+        "day": "甲辰",
+        "hour": "己巳"
+      }
+    }
+  ],
+  "extra": [
+    {
+      "id": "e1",
+      "topic": "절기 경계 (입춘 전)",
+      "name": "양력 2024-02-04 10:00 여 — 입춘(17:27 무렵) 전",
+      "body": {
+        "calendar": "solar",
+        "leap": null,
+        "birth": {
+          "y": 2024,
+          "m": 2,
+          "d": 4
+        },
+        "time": {
+          "h": 10,
+          "m": 0
+        },
+        "gender": "female"
+      },
+      "expect": {
+        "year": "癸卯",
+        "month": "乙丑",
+        "day": "戊戌",
+        "hour": "丁巳"
+      },
+      "basis": "2024년 입춘 절입 2월 4일 17시 27분 무렵(천문 자료, 분 단위는 출처마다 1~2분 차이) 전이라 전년 癸卯년 · 丑월"
+    },
+    {
+      "id": "e2",
+      "topic": "절기 경계 (입춘 후)",
+      "name": "양력 2024-02-04 20:00 여 — 입춘 후",
+      "body": {
+        "calendar": "solar",
+        "leap": null,
+        "birth": {
+          "y": 2024,
+          "m": 2,
+          "d": 4
+        },
+        "time": {
+          "h": 20,
+          "m": 0
+        },
+        "gender": "female"
+      },
+      "expect": {
+        "year": "甲辰",
+        "month": "丙寅",
+        "day": "戊戌",
+        "hour": "壬戌"
+      },
+      "basis": "입춘 절입 뒤라 甲辰년 · 寅월. 같은 날이라 일주는 e1 과 같음"
+    },
+    {
+      "id": "e3",
+      "topic": "자시 (전통 규칙)",
+      "name": "양력 1996-05-17 23:30 여",
+      "body": {
+        "calendar": "solar",
+        "leap": null,
+        "birth": {
+          "y": 1996,
+          "m": 5,
+          "d": 17
+        },
+        "time": {
+          "h": 23,
+          "m": 30
+        },
+        "gender": "female"
+      },
+      "expect": {
+        "year": "丙子",
+        "month": "癸巳",
+        "day": "乙卯",
+        "hour": "丙子"
+      },
+      "basis": "zaSiRule 기본 traditional: 23시 이후는 다음 날(1996-05-18 乙卯) 일주, 시주는 乙일 子시 = 丙子"
+    },
+    {
+      "id": "e4",
+      "topic": "윤달",
+      "name": "음력 2023 윤2월 1일 10:00 여 (양력 2023-03-22)",
+      "body": {
+        "calendar": "lunar",
+        "leap": true,
+        "birth": {
+          "y": 2023,
+          "m": 2,
+          "d": 1
+        },
+        "time": {
+          "h": 10,
+          "m": 0
+        },
+        "gender": "female"
+      },
+      "expect": {
+        "year": "癸卯",
+        "month": "乙卯",
+        "day": "己卯",
+        "hour": "己巳"
+      },
+      "basis": "2023년 윤2월 1일 = 양력 3월 22일 (KASI 기준). 경칩 뒤라 卯월"
+    },
+    {
+      "id": "e5",
+      "topic": "없는 윤달 (오류 확인)",
+      "name": "음력 2024 윤1월 1일 — 2024년엔 윤1월 없음",
+      "body": {
+        "calendar": "lunar",
+        "leap": true,
+        "birth": {
+          "y": 2024,
+          "m": 1,
+          "d": 1
+        },
+        "time": {
+          "h": 10,
+          "m": 0
+        },
+        "gender": "female"
+      },
+      "expectError": "INVALID_LUNAR_DATE",
+      "basis": "공식 문서: 없는 윤달은 400 INVALID_LUNAR_DATE (실패 응답은 과금 없음)"
+    },
+    {
+      "id": "e6",
+      "topic": "서머타임 · 시간대",
+      "name": "양력 1988-07-15 11:30 남 — 서머타임 기간",
+      "body": {
+        "calendar": "solar",
+        "leap": null,
+        "birth": {
+          "y": 1988,
+          "m": 7,
+          "d": 15
+        },
+        "time": {
+          "h": 11,
+          "m": 30
+        },
+        "gender": "male"
+      },
+      "expect": {
+        "year": "戊辰",
+        "month": "己未",
+        "day": "辛未",
+        "hour": "癸巳"
+      },
+      "basis": "공식 문서: 1987–88 서머타임 기간 출생은 1시간을 빼서 계산 → 10:30 巳시 (빼지 않으면 甲午)"
+    }
   ]
 }

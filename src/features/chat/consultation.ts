@@ -1,3 +1,4 @@
+import { getLiveEntry, type LiveEntry } from "@/features/saju/live";
 import { manseProvider, getSampleManse } from "@/features/saju/provider";
 import { buildResultPayload } from "@/features/saju/reading";
 import type { ConsultationProfile, ResultPayload } from "@/features/saju/types";
@@ -25,9 +26,13 @@ export function toConsultationProfile(p: Profile, topic: ConsultTopic = "integra
   };
 }
 
-/** 채팅 카드 · 전체 화면이 쓰는 결과 (동기 — 데모 사주는 즉시 만들 수 있음) */
-export function resultFor(p: Profile, topic?: ConsultTopic): ResultPayload {
+/**
+ * 채팅 카드 · 전체 화면 · 리포트가 쓰는 결과
+ * 검증된 실제 계산(live entry 가 calculated)일 때만 실제 원국, 그 밖에는 데모 사주 (화면에 '샘플' 표시)
+ */
+export function resultFor(p: Profile, topic?: ConsultTopic, entry: LiveEntry | null = getLiveEntry(p)): ResultPayload {
   const cp = toConsultationProfile(p, topic);
+  if (entry?.phase === "calculated") return buildResultPayload(entry.manse, cp, { liveExtras: entry.extras });
   const manse = getSampleManse(!cp.timeUnknown && cp.time !== null);
   return buildResultPayload(manse, cp);
 }

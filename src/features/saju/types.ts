@@ -160,6 +160,16 @@ export type ConsultationProfile = {
   topic: string;
 };
 
+/** 실제 계산(HRUM)에서 함께 받은 값 — 근거 표시용 (운결이 계산하지 않은 값) */
+export type LiveExtras = {
+  source: "hrum";
+  /** 기둥별 십신 · 오행 (HRUM 값 그대로. 일간 자리는 표기하지 않음) */
+  tenGods: { key: PillarKey; stem: string | null; branch: string | null; ohaeng: string | null }[];
+  /** 계산 기준 안내 (표준시 · 자시 규칙 등) */
+  basis: string[];
+  warnings: string[];
+};
+
 /** 결과 카드 6종이 받는 데이터 */
 export type ResultPayload = {
   resultStatus: ResultStatus;
@@ -174,6 +184,8 @@ export type ResultPayload = {
   selfReportedMBTI: SelfReportedMBTI;
   comparison: SajuMBTIComparison;
   integratedInsight: IntegratedInsight;
+  /** 실제 계산일 때만 — 십신 · 계산 기준 */
+  liveExtras?: LiveExtras | null;
 };
 
 /** 이전 이름 (호환용) */
