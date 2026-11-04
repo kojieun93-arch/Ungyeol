@@ -7,6 +7,7 @@ import { REUNION_ASKS, REUNION_LABELS } from "@/content/products/reunion";
 import { productHref } from "@/features/products/routes";
 import { isProductId } from "@/features/products/types";
 import { reportHrefFor } from "@/features/report/handoff";
+import { SAJU_SAMPLE_MODE } from "@/features/saju/provider";
 import { isChapterId } from "@/features/report/types";
 import type { AutoNext, ChoiceOption, Consult, Line, NextNode, NodeId, Profile, Prompt, ScriptNode } from "./types";
 
@@ -171,11 +172,11 @@ export const SCRIPT: Record<NodeId, ScriptNode> = {
         c.entry === "home" ? "고마워요. 이제 결과를 준비할게요." : "고마워요. 시작하기 전에 한 가지만 말씀드릴게요.",
         "아직 실제 만세력 계산이 연결되지 않아서, 오늘 보여드리는 사주 내용은 샘플이에요.",
         "결과는 카드로 하나씩 보내드릴게요. 카드를 누르면 크게 펼쳐서 자세한 풀이를 볼 수 있어요.",
-        "먼저 타고난 사주의 바탕부터 살펴볼게요.",
+        SAJU_SAMPLE_MODE ? "먼저 샘플 사주로 원국이 어떻게 보이는지 보여드릴게요." : "먼저 타고난 사주의 바탕부터 살펴볼게요.",
         { card: "manse" },
         "사주에는 서로 다른 다섯 가지 기운이 담겨 있어요.",
         { card: "elements" },
-        "이 기운들이 만든 타고난 기질이에요.",
+        SAJU_SAMPLE_MODE ? "이 샘플 사주의 기운으로 읽은 예시 기질이에요. 내 사주의 해석은 아니에요." : "이 기운들이 만든 타고난 기질이에요.",
         { card: "innate" },
         p.mbti ? "그럼 지금의 당신을 나타내는 MBTI를 볼게요." : "MBTI를 모르셔도 괜찮아요. 스스로 살펴볼 수 있게 정리해 둘게요.",
         { card: "current" },
@@ -185,7 +186,9 @@ export const SCRIPT: Record<NodeId, ScriptNode> = {
         { card: "insight" },
         ...(p.partner && (p.partner.birth || p.partner.mbti)
           ? ["상대방 정보도 받아 두었어요. 두 사람의 사주를 나란히 비교하는 계산은 아직 연결 전이에요."]
-          : []),
+          : needsPartner(c.topic) && p.partner === null
+            ? ["상대방 정보는 입력하지 않으셨어요. 두 사람 비교는 ‘미확정’으로 남겨 둘게요."]
+            : []),
         // 주제별 리포트 무료 요약 → 리포트 미리보기 (홈에서 상품 주제를 골라 들어온 상담)
         ...(c.entry === "home" && isProductId(c.topic)
           ? [`${PRODUCTS[c.topic].title}의 무료 요약이에요.`, { card: "product" as const, arg: c.topic }]

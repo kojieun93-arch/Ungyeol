@@ -9,7 +9,7 @@ import type { ChoiceOption } from "@/features/chat/types";
   답변은 사용자 쪽(오른쪽)에 붙여 '내가 할 말'로 읽히게 하고, 터치 영역은 44px 이상.
 */
 const base =
-  "inline-flex min-h-11 max-w-full items-center justify-center rounded-full bg-chat-chip px-4 py-2 text-center text-[0.875rem] font-medium leading-snug text-white " +
+  "inline-flex min-h-12 max-w-full items-center justify-center rounded-full bg-chat-chip px-4 py-2 text-center text-[0.9375rem] font-medium leading-snug text-white " +
   "shadow-[inset_0_0_0_1px_var(--color-chat-chip-stroke)] transition-[filter,scale] duration-200 active:scale-[0.985] active:brightness-125 " +
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-chat-accent";
 

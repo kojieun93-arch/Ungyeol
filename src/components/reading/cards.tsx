@@ -530,7 +530,7 @@ export function InsightCard({ r, mode, titleId, action, onTopic }: CardProps) {
       mode={mode}
       isSample={isDemo(r)}
       pill="종합 인사이트"
-      title={<span style={{ fontSize: "0.78em" }}>지금, 당신에게 중요한 키워드</span>}
+      title={<span style={{ fontSize: "0.78em" }}>{isDemo(r) ? "샘플 사주로 본 키워드" : "지금, 당신에게 중요한 키워드"}</span>}
       titleId={titleId}
       action={action}
       footnote={sampleNote(r, `샘플 분석 결과입니다. ${demoBasis(r)} ${mixedNote(r)} 미래를 정해 주는 풀이가 아니에요.`)}

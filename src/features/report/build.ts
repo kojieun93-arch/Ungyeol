@@ -306,7 +306,7 @@ function ch06(meta: ChapterMeta, r: ResultPayload, input: ReportInput): Partial<
         ? { status: "needs-input", label: "상대 정보 없음", detail: "재회 · 궁합 상담에서 상대의 생년월일이나 MBTI를 알려주시면 비교할 수 있어요. 모두 선택 사항이에요.", needs: ["상대 생년월일 (선택)", "상대 MBTI (선택)"] }
         : unconnected("두 사람의 사주 비교 · 미연결", "상대 생년월일로 원국을 계산해야 비교할 수 있어요. 만세력 연결 전에는 보여드리지 않아요.", ["두 사람의 만세력 계산"]),
     sections: [
-      { id: "pattern", title: "나의 관계 패턴", body: [TOPICS.reunion.lines[0], TOPICS.compat.lines[0]] },
+      { id: "pattern", title: isDemo(r) ? "샘플 사주로 본 관계 패턴" : "나의 관계 패턴", body: [TOPICS.reunion.lines[0], TOPICS.compat.lines[0]] },
       {
         id: "partner",
         title: partnerState === "none" ? "상대 정보가 있으면" : "상대 정보로 볼 수 있는 것",

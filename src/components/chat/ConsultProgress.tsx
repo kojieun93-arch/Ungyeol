@@ -23,7 +23,7 @@ export function ConsultProgress({ node, consult }: { node: NodeId; consult: Cons
   // 리포트에서 들어온 질문 중에는 단계 대신 어느 챕터의 질문인지 표시
   if (node === "askChapter" || node === "askAnswer")
     return (
-      <div className="relative z-20 flex h-8 shrink-0 items-center justify-center gap-2 px-4 text-[11.5px] leading-none text-chat-muted" role="status" aria-label="리포트 질문">
+      <div className="relative z-20 flex h-8 shrink-0 items-center justify-center gap-2 px-4 text-[12px] leading-none text-chat-muted" role="status" aria-label="리포트 질문">
         <span className="font-medium text-white/90">리포트 질문</span>
         <span>· {consult.ask?.chapterId ?? ""} 챕터</span>
       </div>
@@ -36,7 +36,7 @@ export function ConsultProgress({ node, consult }: { node: NodeId; consult: Cons
 
   return (
     <div
-      className="relative z-20 flex h-8 shrink-0 items-center justify-center gap-2.5 px-4 text-[11.5px] leading-none text-chat-muted"
+      className="relative z-20 flex h-8 shrink-0 items-center justify-center gap-2.5 px-4 text-[12px] leading-none text-chat-muted"
       role="progressbar"
       aria-label={`${name} 상담 진행`}
       aria-valuemin={1}

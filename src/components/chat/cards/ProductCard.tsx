@@ -43,17 +43,17 @@ export function ProductCard({ id, profile, context, stale = false }: { id: strin
         </span>
       }
     >
-      {stale && <p className="mb-2 text-[12px] font-semibold text-chat-user">정보를 고치기 전의 요약이에요. 확인을 마치면 새 요약이 도착해요.</p>}
+      {stale && <p className="mb-2 text-[13px] font-semibold text-chat-user">정보를 고치기 전의 요약이에요. 확인을 마치면 새 요약이 도착해요.</p>}
       <ul className="space-y-1.5">
         {lines.map((l) => (
-          <li key={l} className="text-[13px] leading-[1.6]">
+          <li key={l} className="text-[14px] leading-[1.6]">
             {l}
           </li>
         ))}
       </ul>
       <div className="mt-3 rounded-[12px] bg-chat-user/[0.08] px-3 py-2.5">
         <CardLabel>알려드려요</CardLabel>
-        <p className="mt-0.5 text-[12.5px] leading-[1.55]" style={{ color: PLUM }}>
+        <p className="mt-0.5 text-[13.5px] leading-[1.55]" style={{ color: PLUM }}>
           {id === "reunion" ? "상대방의 지금 마음이나 재회 여부는 이 요약으로 알 수 없어요." : P.limits.length ? `이 리포트가 알 수 없는 것 · ${P.limits.join(" · ")}` : P.safety[0]}
         </p>
       </div>

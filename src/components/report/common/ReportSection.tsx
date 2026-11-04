@@ -52,7 +52,7 @@ export function SlotBadge({ slot }: { slot: DataSlot }) {
         {slot.status === "demo" ? "샘플" : slot.status === "unconnected" ? "미연결" : "정보 필요"} · {slot.label}
       </p>
       {slot.detail && <p className="mt-1">{slot.detail}</p>}
-      {slot.needs && slot.needs.length > 0 && <p className="mt-1 text-[12.5px] opacity-85">필요한 것 · {slot.needs.join(" · ")}</p>}
+      {slot.needs && slot.needs.length > 0 && <p className="mt-1 text-[13px] opacity-85">필요한 것 · {slot.needs.join(" · ")}</p>}
     </div>
   );
 }

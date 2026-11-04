@@ -47,7 +47,9 @@ function base(s: ProductSource) {
   const pm = s.partner?.mbti ?? null;
   const demo = isDemo(r);
   const sampleTag = demo ? " (샘플)" : "";
-  return { r, dm, trait, count, god, ref, myType, usedType, pm, demo, sampleTag, my: letters(usedType)!, their: letters(pm) };
+  /** 샘플 사주를 '나'의 사실처럼 말하지 않도록 — 실제 계산 전에는 '샘플 사주의 일간' */
+  const dmWho = demo ? "샘플 사주의 일간" : "나의 일간";
+  return { r, dm, trait, count, god, ref, myType, usedType, pm, demo, sampleTag, dmWho, my: letters(usedType)!, their: letters(pm) };
 }
 
 const demoSlot = (s: ProductSource, what: string, extra = ""): DataSlot =>
@@ -66,10 +68,10 @@ function ch01(s: ProductSource): Part {
       ? "상대방 생년월일은 받아 두었지만, 만세력 계산이 연결되지 않아 사주는 미확정이에요. 생년월일은 리포트 어디에도 표시하지 않아요."
       : "상대방 생년월일이 없어 사주는 미확정이에요. 몰라도 MBTI와 두 사람의 경험으로 볼 수 있는 부분이 많아요.";
   return {
-    summary: `나는 ‘${b.trait.image}’의 결${b.sampleTag}, 지금의 선호는 ${b.myType ?? "미확정"}이에요. 상대방은 ${b.pm ? `${b.pm}로 알고 계세요` : "MBTI도 사주도 미확정이에요"}.`,
+    summary: `${b.demo ? `샘플 사주로 보면 ‘${b.trait.image}’의 결이고(내 사주 아님)` : `나는 ‘${b.trait.image}’의 결`}, 지금의 선호는 ${b.myType ?? "미확정"}이에요. 상대방은 ${b.pm ? `${b.pm}로 알고 계세요` : "MBTI도 사주도 미확정이에요"}.`,
     dataSlot: demoSlot(s, "기질", pState === "birth" ? " 상대방 사주도 계산 연결 후 들어와요." : ""),
     sections: [
-      { id: "me", title: "나의 타고난 결", body: [b.r.sajuPersonality.summary, b.trait.core], more: [`강점 · ${b.trait.strengths.join(" / ")}`, `조심할 점 · ${b.trait.cautions.join(" ")}`] },
+      { id: "me", title: b.demo ? "샘플 사주의 타고난 결 (내 사주 아님)" : "나의 타고난 결", body: [b.r.sajuPersonality.summary, b.trait.core], more: [`강점 · ${b.trait.strengths.join(" / ")}`, `조심할 점 · ${b.trait.cautions.join(" ")}`] },
       {
         id: "now",
         title: "지금의 나 (MBTI)",
@@ -123,7 +125,7 @@ function ch02(s: ProductSource): Part {
   const L = b.my;
   const show = `${L.includes("E") ? "자주 말로 확인하며" : "조용히 곁에 있으며"} ${L.includes("F") ? "마음을 알아주는 말로" : "문제를 함께 풀어 주는 행동으로"} 애정을 보여 주기 쉬워요. ${L.includes("J") ? "약속과 계획에서 안정감을 느끼는 편이에요." : "즉흥적인 즐거움에서 설렘을 느끼는 편이에요."}`;
   return {
-    summary: `가장 두드러진 건 ${LOVE_GOD[top.g].name}(${top.g})이에요${b.sampleTag}. 사랑할 때 ‘${LOVE_GOD[top.g].love}’이 먼저 나오기 쉬워요.`,
+    summary: `${b.demo ? "샘플 사주에서 " : ""}가장 두드러진 건 ${LOVE_GOD[top.g].name}(${top.g})이에요. 사랑할 때 ‘${LOVE_GOD[top.g].love}’이 먼저 나오기 쉬워요.`,
     dataSlot: demoSlot(s, "오행 분포"),
     sections: [
       {
@@ -211,7 +213,7 @@ function ch04(s: ProductSource): Part {
   const b = base(s);
   const pState = partnerState(s);
   return {
-    summary: `두 원국은 아직 비교하지 않았어요. 대신 나의 일간 ${elementLabel(b.dm.element)}${b.sampleTag}에서 출발해, 상대 일간이 무엇이냐에 따라 관계가 어떻게 달라지는지 보여드려요.`,
+    summary: `두 원국은 아직 비교하지 않았어요. 대신 ${b.dmWho} ${elementLabel(b.dm.element)}에서 출발해, 상대 일간이 무엇이냐에 따라 관계가 어떻게 달라지는지 보여드려요.`,
     dataSlot:
       pState === "birth"
         ? { status: "unconnected", label: "두 사람 사주 비교 · 미연결", detail: "상대방 생년월일은 받았지만 만세력 계산이 연결되지 않아 두 원국을 계산하지 않았어요.", needs: ["내 원국 계산", "상대 원국 계산"] }
@@ -222,7 +224,7 @@ function ch04(s: ProductSource): Part {
         title: "궁합을 읽는 틀",
         body: ["사주 궁합은 점수가 아니에요. 다섯 기운이 서로를 살리고(생) 다잡는(극) 관계로, 두 사람이 어떤 방식으로 영향을 주고받는지를 읽어요.", "다잡는 관계도 나쁜 게 아니에요. 전통적으로 서로를 다듬고 긴장을 주는 관계로 봐요."],
       },
-      { id: "start", title: "나의 일간에서 출발하면", body: [`나의 일간은 ${elementLabel(b.dm.element)}이에요${b.sampleTag}. ${ELEMENTS[b.dm.element].tendency}의 기운이에요. 상대 일간이 다섯 기운 중 무엇이냐에 따라 아래 표처럼 읽을 수 있어요.`] },
+      { id: "start", title: b.demo ? "샘플 사주의 일간에서 출발하면" : "나의 일간에서 출발하면", body: [`${b.dmWho}은 ${elementLabel(b.dm.element)}이에요. ${ELEMENTS[b.dm.element].tendency}의 기운이에요. 상대 일간이 다섯 기운 중 무엇이냐에 따라 아래 표처럼 읽을 수 있어요.`] },
       {
         id: "later",
         title: "아직 비교하지 않은 것",
@@ -233,7 +235,7 @@ function ch04(s: ProductSource): Part {
     visuals: [
       {
         kind: "element-relations",
-        me: { label: `나 · ${elementLabel(b.dm.element)}${b.sampleTag}`, color: ELEMENTS[b.dm.element].color },
+        me: { label: `${b.demo ? "샘플 사주" : "나"} · ${elementLabel(b.dm.element)}`, color: ELEMENTS[b.dm.element].color },
         rows: ELEMENT_ORDER.map((el) => ({ element: elementLabel(el), color: ELEMENTS[el].color, ...relationText(b.dm.element, el) })),
         note: "상대 일간이 이 중 어디에 해당하는지는 계산 연결 후 표시돼요.",
       },
@@ -337,7 +339,7 @@ function ch07(s: ProductSource): Part {
   const months = monthsBetween(br, s.now);
   const elapsed = months >= 0 ? `약 ${months}개월 전 (${s.reportId === "sample" ? `예시 기준일 ${s.now.getFullYear()}년 ${s.now.getMonth() + 1}월 · ` : ""}달 단위 계산)` : "";
   return {
-    summary: `헤어진 ${br.y}년은 ${ganjiText(yg)}년이에요. 나의 일간${b.sampleTag}에게는 ‘${LOVE_GOD[rel].name}(${rel})’이 들어온 해로 읽어요.`,
+    summary: `헤어진 ${br.y}년은 ${ganjiText(yg)}년이에요. ${b.dmWho}에게는 ‘${LOVE_GOD[rel].name}(${rel})’이 들어온 해로 읽어요.`,
     dataSlot: demoSlot(s, "원국", " 연 · 월 간지는 달력으로 정해진 값이고, 나와의 관계 해석은 샘플 원국 기준이에요."),
     sections: [
       { id: "year", title: `${br.y}년 ${ganjiText(yg)}년`, body: [`천간 ${yg.stem.hanja}은 ${ELEMENTS[yg.stem.element].hangul}, 지지 ${yg.branch.hanja}는 ${ELEMENTS[yg.branch.element].hangul}의 기운이에요.`, YEAR_GOD_READING[rel]], more: br.m <= 2 ? [`${br.m}월이 입춘(2월 4일 무렵) 전이었다면, 절기로는 아직 ${br.y - 1}년 ${ganjiText(prev)}년이에요. 날짜를 모르면 두 해가 모두 가능해요.`] : undefined },
@@ -348,7 +350,7 @@ function ch07(s: ProductSource): Part {
       {
         kind: "breakup-timing",
         status: "known",
-        year: { label: `${br.y}년`, pillar: ganjiText(yg), reading: ganjiReading(yg), color: ELEMENTS[yg.stem.element].color, relation: `나${b.sampleTag}에게 ${rel}` },
+        year: { label: `${br.y}년`, pillar: ganjiText(yg), reading: ganjiReading(yg), color: ELEMENTS[yg.stem.element].color, relation: `${b.demo ? "샘플 사주" : "나"}에게 ${rel}` },
         window: { calendar: `${br.y}년 ${br.m}월`, before: { label: w.before.label, pillar: ganjiText(w.before.ganji) }, after: { label: w.after.label, pillar: ganjiText(w.after.ganji) }, term: w.term },
         elapsed,
       } satisfies ProductVisual,
@@ -472,10 +474,10 @@ export function reunionFreeSummary(s: ProductSource): string[] {
   const br = s.reunion?.breakup;
   const yearLine =
     br && br !== "private"
-      ? `이별한 ${br.y}년은 ${ganjiText(yearGanJi(br.y))}년 — 나${b.sampleTag}에게는 ${relationTo(b.dm.element, yearGanJi(br.y).stem.element).name}의 해였어요.`
+      ? `이별한 ${br.y}년은 ${ganjiText(yearGanJi(br.y))}년 — ${b.demo ? "샘플 사주에게는" : "나에게는"} ${relationTo(b.dm.element, yearGanJi(br.y).stem.element).name}의 해로 읽혀요.`
       : "이별 시기는 미확정이라 그해의 기운은 비워 두었어요.";
   return [
-    `나의 결 · ${b.trait.image}${b.sampleTag}, 지금의 선호 ${b.myType ?? "미확정"}`,
+    `${b.demo ? "샘플 사주의 결 (내 사주 아님)" : "나의 결"} · ${b.trait.image}, 지금의 선호 ${b.myType ?? "미확정"}`,
     `되풀이된 고리 · ${P.key}`,
     yearLine,
     b.pm ? `상대 MBTI ${b.pm}와 비교 · 사주 비교는 미확정` : "상대 정보 미확정 · 내 쪽 중심으로 풀이",

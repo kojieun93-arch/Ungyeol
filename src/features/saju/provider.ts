@@ -79,5 +79,11 @@ export class MockManseProvider implements ManseProvider {
   }
 }
 
-/** 현재 사용하는 제공자. HRUM 연동 시 이 한 줄만 바꿈 */
+/**
+ * 브라우저에서 쓰는 제공자 — 항상 샘플 (실제 계산은 서버 /api/manse 에서만, 키는 서버 환경 변수)
+ * 실제 계산 결과를 화면에 쓰기 시작할 때는 이 값이 아니라 서버 응답의 resultStatus 로 판단
+ */
 export const manseProvider: ManseProvider = new MockManseProvider();
+
+/** 지금 화면의 사주가 샘플인지 — 채팅 문구를 '내 사주'처럼 말하지 않게 */
+export const SAJU_SAMPLE_MODE = manseProvider.name === "mock";

@@ -19,7 +19,7 @@ export function ReportConsultationPrompt({ href, onLeave, note }: { href: string
         </svg>
         운결에게 더 물어보기
       </Link>
-      {note && <p className="mt-1.5 text-center text-[12px] leading-[1.5] text-[#7b6266] [word-break:keep-all]">{note}</p>}
+      {note && <p className="mt-1.5 text-center text-[13px] leading-[1.5] text-[#7b6266] [word-break:keep-all]">{note}</p>}
     </div>
   );
 }

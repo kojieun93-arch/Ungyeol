@@ -25,19 +25,19 @@ export function TopicCard({ id }: { id: TopicId }) {
     >
       <ul className="space-y-1.5">
         {t.lines.map((l) => (
-          <li key={l} className="text-[13px] leading-[1.6]">
+          <li key={l} className="text-[14px] leading-[1.6]">
             {l}
           </li>
         ))}
       </ul>
       <div className="mt-3 rounded-[12px] bg-chat-user/[0.08] px-3 py-2.5">
         <CardLabel>작은 실천</CardLabel>
-        <p className="mt-0.5 text-[13px] leading-[1.55]" style={{ color: PLUM }}>
+        <p className="mt-0.5 text-[14px] leading-[1.55]" style={{ color: PLUM }}>
           {t.practice}
         </p>
       </div>
-      {t.note && <p className="mt-2.5 text-[11.5px] leading-snug text-chat-advisor-soft">{t.note}</p>}
-      <p className="mt-2.5 text-[11.5px] leading-snug text-chat-advisor-soft">샘플 사주(을목 乙木 일간) 기준의 예시 풀이예요.</p>
+      {t.note && <p className="mt-2.5 text-[12.5px] leading-snug text-chat-advisor-soft">{t.note}</p>}
+      <p className="mt-2.5 text-[12.5px] leading-snug text-chat-advisor-soft">샘플 사주(을목 乙木 일간) 기준의 예시 풀이예요.</p>
     </ChatCard>
   );
 }

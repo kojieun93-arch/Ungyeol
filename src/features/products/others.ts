@@ -27,7 +27,8 @@ function ctx(s: ProductSource) {
   };
   const type = s.mbti ?? r.sajuMBTIReference.type;
   const L = type.split("").filter(isLetter) as MbtiLetter[];
-  return { r, dm, trait: DAY_MASTER_TRAITS[dm.hanja], count, god, type, L, own: !!s.mbti, tag: isDemo(r) ? " (샘플)" : "" };
+  const demo = isDemo(r);
+  return { r, dm, trait: DAY_MASTER_TRAITS[dm.hanja], count, god, type, L, own: !!s.mbti, demo, tag: demo ? " (샘플)" : "", dmWho: demo ? "샘플 사주의 일간" : "나의 일간" };
 }
 
 const slot = (s: ProductSource, what: string, extra = ""): DataSlot =>
@@ -44,7 +45,7 @@ function love01(s: ProductSource): Part {
   const gwan = x.god("관성");
   const fast = x.L.includes("E") || x.L.includes("P");
   return {
-    summary: `‘${x.trait.image}’${x.tag}처럼, ${fast ? "설렘을 빨리 알아차리고 먼저 다가가는" : "천천히 마음을 열고 확신이 생긴 뒤 다가가는"} 연애 결로 읽혀요.`,
+    summary: `${x.demo ? "샘플 사주로 보면 " : ""}‘${x.trait.image}’처럼, ${fast ? "설렘을 빨리 알아차리고 먼저 다가가는" : "천천히 마음을 열고 확신이 생긴 뒤 다가가는"} 연애 결로 읽혀요.`,
     dataSlot: slot(s, "연애 성향"),
     sections: [
       { id: "start", title: "설렘이 시작되는 방식", body: [`표현의 기운(식상)이 ${many(sik.n)}. ${sik.n >= 2 ? "마음이 생기면 말과 행동으로 먼저 신호를 보내는 편이에요." : "마음이 생겨도 겉으로 드러내기까지 시간이 걸리는 편이에요."}`, `${x.own ? `직접 고른 ${x.type}` : `참고유형 ${x.type}(운결 자체 분류)`}로 보면, ${x.L.includes("N") ? "상대와 나눌 이야기와 가능성에서" : "함께한 구체적인 순간에서"} 설렘을 느끼기 쉬워요.`] },
@@ -74,7 +75,7 @@ function compatRel(me: ElementKey, them: ElementKey) {
 function compat02(s: ProductSource): Part {
   const x = ctx(s);
   return {
-    summary: `나의 일간 ${elementLabel(x.dm.element)}${x.tag}을 기준으로, 상대 기운에 따라 생겨나는 다섯 관계를 보여드려요. 두 원국의 실제 비교는 계산 연결 후 들어와요.`,
+    summary: `${x.dmWho} ${elementLabel(x.dm.element)}을 기준으로, 상대 기운에 따라 생겨나는 다섯 관계를 보여드려요. 두 원국의 실제 비교는 계산 연결 후 들어와요.`,
     dataSlot: { status: "unconnected", label: "두 사람 원국 비교 · 미연결", detail: "상대방 원국을 계산하지 않았어요. 아래 표는 ‘상대 일간이 이 기운이라면’의 읽는 법이에요.", needs: ["내 원국 계산", "상대 원국 계산"] },
     sections: [
       { id: "five", title: "다섯 기운, 다섯 관계", body: ["오행에는 서로를 살리는 순환(목→화→토→금→수→목)과 서로를 다듬는 순환(목→토→수→화→금→목)이 있어요. 두 사람의 일간이 이 순환의 어디에 놓이느냐에 따라 관계의 결이 달라져요."] },
@@ -83,7 +84,7 @@ function compat02(s: ProductSource): Part {
     visuals: [
       {
         kind: "element-relations",
-        me: { label: `나 · ${elementLabel(x.dm.element)}${x.tag}`, color: ELEMENTS[x.dm.element].color },
+        me: { label: `${x.demo ? "샘플 사주" : "나"} · ${elementLabel(x.dm.element)}`, color: ELEMENTS[x.dm.element].color },
         rows: ELEMENT_ORDER.map((el) => ({ element: elementLabel(el), color: ELEMENTS[el].color, ...compatRel(x.dm.element, el) })),
         note: "상대 일간은 계산 연결 후 표시돼요.",
       },
@@ -99,7 +100,7 @@ function wealth01(s: ProductSource): Part {
   const sik = x.god("식상");
   const bi = x.god("비겁");
   return {
-    summary: `내가 다스리는 기운, 재성은 ${jae.label}이에요${x.tag}. 원국에서 ${many(jae.n)}.`,
+    summary: `${x.demo ? "샘플 사주에서" : "내 사주에서"} 일간이 다스리는 기운, 재성은 ${jae.label}이에요. 원국에서 ${many(jae.n)}.`,
     dataSlot: slot(s, "재물 요소", " 재물의 크기나 시기를 예측하지 않아요."),
     sections: [
       { id: "wealth", title: "재성 — 내가 다스리는 기운", body: [`일간이 ${elementLabel(x.dm.element)}일 때, 내가 다스리는(극하는) ${jae.label}이 재성이에요. 전통적으로 재물 · 현실 감각 · 결과를 만드는 힘으로 읽어요.`, jae.n >= 2 ? "현실을 계산하고 결과를 챙기는 감각이 익숙한 편이에요." : jae.n === 0 ? "돈과 결과를 앞세우기보다 다른 가치를 먼저 보는 편으로 읽어요. 돈 관리는 습관과 도구로 채우면 좋아요." : "현실 감각이 필요할 때 꺼내 쓰는 편이에요."] },
@@ -128,7 +129,7 @@ function career01(s: ProductSource): Part {
   const WORK: Record<string, string> = { 관성: "조직 · 규칙 · 책임을 다루는 힘", 식상: "표현 · 기술 · 만들어 내는 힘", 인성: "배움 · 자격 · 깊이 생각하는 힘", 재성: "성과 · 실무 · 현실을 다루는 힘" };
   const top = [...g].sort((a, z) => z.n - a.n)[0];
   return {
-    summary: `일할 때 가장 먼저 꺼내기 쉬운 힘은 ${WORK[top.k]}(${top.k})이에요${x.tag}.`,
+    summary: `${x.demo ? "샘플 사주로 보면, " : ""}일할 때 가장 먼저 꺼내기 쉬운 힘은 ${WORK[top.k]}(${top.k})이에요.`,
     dataSlot: slot(s, "업무 기질", " 특정 직업을 추천하지 않아요."),
     sections: [
       { id: "force", title: "일에서 쓰는 네 가지 힘", body: ["나의 일간을 기준으로, 일과 관련된 네 갈래의 기운이 원국에 얼마나 있는지 봤어요."], list: g.map((v) => `${WORK[v.k]} — ${v.label} ${v.n}글자`) },
@@ -198,7 +199,7 @@ function year03(s: ProductSource): Part {
     sections: [
       { id: "term", title: "절기 기준과 달력 월의 차이", body: [`사주의 한 달은 1일이 아니라 절기(節)에 시작해요. 그래서 달력의 1월은 소한(1월 6일 무렵) 전후로 두 달에 걸쳐 있고, 2월 초 입춘 전까지는 아직 ${2026}년 ${ganjiText(prev)}년의 흐름이에요.`, "아래 표의 ‘절기 전’은 그 달 초, ‘절기 후’는 그 절기부터 다음 달 절기 전까지예요. 절기 날짜는 해마다 하루 안팎 달라져요."] },
       { id: "season", title: "계절로 묶어 보면", body: ["절기 월의 지지는 계절의 기운을 따라요. 아래는 전통적인 계절 오행이에요."], list: groups.map((g) => `${g.name} — ${ELEMENTS[g.el].hangul}(${ELEMENTS[g.el].hanja})의 계절 · ${ELEMENTS[g.el].tendency}`) },
-      { id: "me", title: "나에게는 어떻게 작용할까", body: [`나의 일간 ${elementLabel(x.dm.element)}${x.tag}과 각 달의 기운이 어떻게 만나는지는 계산이 연결되면 이 자리에 들어와요. 지금은 좋은 달 · 나쁜 달을 정하지 않았어요.`, `참고로 2027년 천간 丁(화)은 나의 일간${x.tag}에게 ${relationTo(x.dm.element, "fire").name}의 기운이에요.`] },
+      { id: "me", title: "나에게는 어떻게 작용할까", body: [`${x.dmWho} ${elementLabel(x.dm.element)}과 각 달의 기운이 어떻게 만나는지는 계산이 연결되면 이 자리에 들어와요. 지금은 좋은 달 · 나쁜 달을 정하지 않았어요.`, `참고로 2027년 천간 丁(화)은 ${x.dmWho}에게 ${relationTo(x.dm.element, "fire").name}의 기운이에요.`] },
     ],
     visuals: [{ kind: "term-calendar", year: 2027, rows }],
     insight: { advisor: ["달력보다 절기를 따라가면, 계절이 바뀌는 순간을 조금 더 또렷하게 느낄 수 있어요."], practice: "2027년 입춘(2월 4일 무렵)에 한 해의 바람을 한 줄로 적어 보세요.", questions: ["2027년의 어느 계절이 가장 기다려지나요?"] },

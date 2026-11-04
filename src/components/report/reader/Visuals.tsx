@@ -12,7 +12,7 @@ export function Panel({ title, note, children }: { title: string; note?: string;
     <figure className="reveal rounded-[1.1rem] bg-white/60 px-3.5 py-4 shadow-[0_0_0_1px_#e6cdbd]">
       <figcaption className="mb-3 text-center font-serif text-[15px] font-semibold text-[#4a1a2c]">{title}</figcaption>
       {children}
-      {note && <p className="mt-3 text-center text-[12.5px] leading-[1.55] text-[#7b6266] [word-break:keep-all]">{note}</p>}
+      {note && <p className="mt-3 text-center text-[13px] leading-[1.55] text-[#7b6266] [word-break:keep-all]">{note}</p>}
     </figure>
   );
 }

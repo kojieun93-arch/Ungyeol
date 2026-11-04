@@ -41,6 +41,8 @@ npm run start        # http://localhost:3000
 
 ## HRUM 연결 전 준비 상태
 
+자세한 구조와 환경 변수는 `docs/MANSE.md`
+
 - 화면은 `ManseProvider` 인터페이스만 사용 (`src/features/saju/provider.ts`), 지금은 `MockManseProvider` (결과는 항상 `resultStatus: "demo"`)
 - 키는 서버 환경 변수로만: `.env.example` 참고. `.env*` 는 gitignore (예외 `.env.example`)
 - 클라이언트 코드에 `NEXT_PUBLIC_` 환경 변수 없음, API 키 · 개인정보 없음

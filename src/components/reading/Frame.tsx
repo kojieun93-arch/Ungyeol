@@ -19,7 +19,7 @@ import { Cloud, Knot } from "./icons";
 export type CardMode = "chat" | "full" | "share";
 
 export const MODE_FONT: Record<CardMode, string> = {
-  chat: "clamp(11.5px, 3.3vw, 13px)",
+  chat: "clamp(12px, 3.45vw, 13.5px)",
   full: "clamp(13.5px, 3.9vw, 16px)",
   share: "15px",
 };
@@ -184,7 +184,7 @@ export function ReadingFrame({
         </div>
 
         {footnote && (
-          <p className="relative mx-auto text-center font-serif" style={{ marginTop: "1em", fontSize: "max(0.8em, 10px)", lineHeight: 1.55, color: C.soft, maxWidth: "26em", wordBreak: "keep-all" }}>
+          <p className="relative mx-auto text-center font-serif" style={{ marginTop: "1em", fontSize: "max(0.82em, 11.5px)", lineHeight: 1.55, color: C.soft, maxWidth: "26em", wordBreak: "keep-all" }}>
             {footnote}
           </p>
         )}
