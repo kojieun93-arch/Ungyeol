@@ -84,22 +84,25 @@ src/
 
 UI: `components/report/reader/` — ReportReader(진행률 · 현재 챕터 · 목차 시트 · 위로 가기 · 카드 크게 보기) · Chapter(공개/잠김) · Visuals(원국표 · 십성 · 오행 · 규칙표 · 비교 카드 · 글자 비교 · 대운 빈 칸 · 월 간지)
 
-## PHASE 5 — 운세별 전용 리포트
+## PHASE 5 — 주제별 프리미엄 리포트 (구현 완료 · 재회운 완성, 6개 주제는 구조 + 샘플 1챕터)
 
-| 리포트 | 무료 요약 | 심층(준비 중) | 필요한 데이터 |
-|---|---|---|---|
-| 연애 | 관계 기질 한 장 | 감정 표현 · 시기별 해석 | 원국 · MBTI |
-| 재회 | 관계 패턴 질문 | 이별 시점 전후 흐름 · 상대 비교 | 원국 · 상대 정보 · 이별 시기(선택 답변) |
-| 궁합 | 두 사람의 오행 나란히 | 사주 · MBTI 비교 | 두 사람의 원국 · MBTI |
-| 재물 | 돈 습관 체크 | 재성 중심 전통 해석 · 소비 성향 | 원국 |
-| 직업 | 일의 방식 | 적성 · 업무 스타일 · 전환 탐색 | 원국 · MBTI |
-| 인간관계 | 관계 거리 | 대인 성향 · 갈등 패턴 | 원국 · MBTI |
-| 신년운세 | 한 해 키워드 | 연간 요약 · 월별 흐름 | 원국 · 2027년 간지(HRUM) |
+| 상품 | 챕터 | 공개 샘플 | 본문 | 필요한 데이터 (연결 후) |
+|---|---|---|---|---|
+| 재회운 | 10 | 01 · 07 | **완성** (입력에 따라 달라짐) | 원국 · 상대 원국 · 이별 연월 |
+| 연애 · 인연운 | 6 | 01 | 구조 + 샘플 | 원국 · 대운 · 세운 |
+| 궁합 | 5 | 02 | 구조 + 샘플 | 두 사람의 원국 |
+| 재물운 | 4 | 01 | 구조 + 샘플 | 원국 · 소비 습관 상담 질문 |
+| 직업 · 적성운 | 7 | 01 | 구조 + 샘플 | 원국 · 일 상황 상담 질문 |
+| 인간관계운 | 6 | 04 | 구조 + 샘플 | 원국 · 관계 상담 질문 |
+| 2027 신년운세 | 6 | 03 (절기 월표) | 구조 + 샘플 | 원국 · 대운 · 세운 · 월운 |
 
-- 같은 `FortuneReport` 구조, 챕터 수만 다름 (3~6챕터)
-- 가격: `PRODUCT_OFFERS` (지금 모두 `priceKRW: null`, `status: "draft"`). 운영자가 값을 넣기 전까지 화면은 “가격 미정”
-- 결제: **테스트 UI만** — `PurchaseStatus.test-checkout` 화면에 “테스트 화면이에요. 실제 결제와 열람 권한은 없어요.” 고정 문구. 결제 수단 입력 필드 없음. `owned` 상태로 바꾸는 코드는 만들지 않음
-- 후기 · 정확도 · 사용자 수 같은 수치는 만들지 않음
+- 상품 정의: `content/products/index.ts` (`ReportProduct` — 입력 · 챕터 · 미리보기 범위 · 가격 null · 열람 상태 test/not-connected · 안내 · 한계)
+- 콘텐츠: `content/products/reunion.ts`, `content/products/others.ts` / 조립: `features/products/{reunion,others,build,source}.ts`
+- 공통 UI: `components/report/common` (ReportHero · ReportTableOfContents · ReportChapter · ReportSection · ReportInsightCard · ReportConsultationPrompt · ReportPreview · ReportAccessGate · ReportNavigation) — 종합 리포트도 같은 조각 사용
+- 라우트: `/reports` · `/reports/[productId]` · `/reports/[productId]/[sample|my]` · `…/chapter/[chapterId]`
+- 재회 상담: 지금의 마음 → 기본 정보 → 상대방 정보(선택) → 헤어진 연월 · 연락 · 이유(내 인식) · 궁금한 점 → 확인 → 결과 6종 → 무료 요약 카드 → 리포트 미리보기
+- my 리포트 = 채팅의 최근 결과 카드 기준. 결과 뒤 정보를 고치면 ‘이전 정보 기준’, 다시 확인하면 새로 만들고 돌아왔을 때 ‘바뀜’ 알림
+- 남은 일: 6개 주제 본문 · 주제별 상담 질문(소비 습관 · 일 상황 · 관계 범위) · 두 사람 원국 비교 · 대운/세운/월운 계산(HRUM) · PDF · 실제 결제/권한
 
 ## PHASE 6 — 전체 모바일 점검과 HRUM 준비
 

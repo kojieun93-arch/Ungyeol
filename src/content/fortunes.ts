@@ -116,7 +116,7 @@ export const FORTUNES: Record<FortuneId, FortuneCategory> = {
     free: ["재회운 샘플 풀이", "관계를 돌아보는 질문"],
     premium: ["관계 패턴 심층 해석", "이별 시점 전후의 흐름", "상대 정보 기반 비교"],
     inputs: [...BASE_INPUTS, "partner", "situation"],
-    followUps: [{ question: "헤어진 지는 얼마나 되었나요?", options: ["한 달 이내", "1년 이내", "1년 이상", "말하고 싶지 않아요"] }],
+    followUps: [{ question: "헤어진 때는 언제쯤이에요? (연도와 월만)", options: ["연 · 월 입력", "기억나지 않아요", "말하고 싶지 않아요"] }, { question: "헤어진 뒤 연락은 어땠어요?", options: ["연락하지 않았어요", "가끔 안부를 주고받아요", "최근 다시 연락이 닿았어요", "연락하지 않기로 했어요"] }],
     chatTopic: "reunion",
   },
   compat: {

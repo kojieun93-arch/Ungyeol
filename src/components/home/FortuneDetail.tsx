@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { FORTUNES, FORTUNE_IDS, INPUT_LABEL, offerFor, type FortuneCategory } from "@/content/fortunes";
+import { PRODUCTS } from "@/content/products";
+import { isProductId } from "@/features/products/types";
 import { FortuneArt } from "./FortuneArt";
 import { ChatShortcut, HomeBar, SectionHead, StepFlow, Tag } from "./parts";
 
@@ -90,6 +92,14 @@ export function FortuneDetail({ f }: { f: FortuneCategory }) {
                   <span>{priceLabel(f)}</span>
                   <span>아직 판매하지 않아요</span>
                 </p>
+                {isProductId(f.id) && (
+                  <Link
+                    href={`/reports/${f.id}`}
+                    className="mt-3 flex min-h-11 items-center justify-center rounded-full text-[14px] font-medium text-white shadow-[inset_0_0_0_1px_rgb(232_201_172/0.5)]"
+                  >
+                    {PRODUCTS[f.id].title} 목차 · 샘플 보기
+                  </Link>
+                )}
               </div>
             </div>
           </section>

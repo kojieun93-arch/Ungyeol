@@ -39,6 +39,9 @@ export default function ReportPreviewPage() {
             <Button href="/report/my" variant="secondary" fullWidth>
               내 상담 결과로 보기
             </Button>
+            <Button href="/reports" variant="secondary" fullWidth>
+              주제별 리포트 7종 보기
+            </Button>
           </div>
         </header>
 

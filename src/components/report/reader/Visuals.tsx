@@ -7,7 +7,7 @@ import { TOPICS, type TopicId } from "@/features/saju/topics";
 
 /* 챕터 안 시각 자료 — 모두 HTML 표 · SVG (이미지 아님). 결과 카드 6종의 표 · 그래프 · 비교 카드를 그대로 재사용 */
 
-function Panel({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
+export function Panel({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
   return (
     <figure className="reveal rounded-[1.1rem] bg-white/60 px-3.5 py-4 shadow-[0_0_0_1px_#e6cdbd]">
       <figcaption className="mb-3 text-center font-serif text-[15px] font-semibold text-[#4a1a2c]">{title}</figcaption>
@@ -17,8 +17,8 @@ function Panel({ title, note, children }: { title: string; note?: string; childr
   );
 }
 
-const th = "border-b border-[#e6cdbd] px-2 py-2 text-left font-serif text-[13px] font-semibold text-[#6e2a40]";
-const td = "border-b border-[#e6cdbd]/70 px-2 py-2.5 align-top text-[14px] leading-[1.5] [word-break:keep-all]";
+export const th = "border-b border-[#e6cdbd] px-2 py-2 text-left font-serif text-[13px] font-semibold text-[#6e2a40]";
+export const td = "border-b border-[#e6cdbd]/70 px-2 py-2.5 align-top text-[14px] leading-[1.5] [word-break:keep-all]";
 
 export function Visual({ v, r, onTopic }: { v: ReportVisual; r: ResultPayload; onTopic?: (id: TopicId) => void }) {
   switch (v.kind) {

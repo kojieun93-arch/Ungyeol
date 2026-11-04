@@ -64,3 +64,22 @@ export function validateNickname(raw: string): { ok: true; value: string } | { o
   if (v.length > NICKNAME_MAX) return { ok: false, error: `${NICKNAME_MAX}자 이내로 적어주세요.` };
   return { ok: true, value: v };
 }
+
+/** 헤어진 연 · 월 — 날짜(일)는 받지 않음. 미래 · 태어나기 전은 안 됨 */
+export function validateYearMonth(
+  raw: { y: string; m: string },
+  { now = new Date(), birthYear = null }: { now?: Date; birthYear?: number | null } = {},
+): { ok: true; value: { y: number; m: number } } | { ok: false; errors: Partial<Record<"y" | "m" | "form", string>> } {
+  const errors: Partial<Record<"y" | "m" | "form", string>> = {};
+  const thisYear = now.getFullYear();
+  const y = Number(raw.y);
+  const m = Number(raw.m);
+  const min = Math.max(MIN_YEAR, birthYear ?? MIN_YEAR);
+  if (!raw.y.trim()) errors.y = "헤어진 해를 입력해주세요.";
+  else if (!/^\d{4}$/.test(raw.y.trim())) errors.y = "네 자리 숫자로 입력해주세요. 예) 2025";
+  else if (y < min || y > thisYear) errors.y = birthYear && y < birthYear ? "태어난 해보다 앞설 수 없어요." : `${min}년부터 ${thisYear}년 사이로 입력해주세요.`;
+  if (!raw.m) errors.m = "헤어진 달을 골라주세요.";
+  if (!errors.y && !errors.m && y === thisYear && m > now.getMonth() + 1) errors.form = "아직 오지 않은 달이에요.";
+  if (Object.keys(errors).length) return { ok: false, errors };
+  return { ok: true, value: { y, m } };
+}

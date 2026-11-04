@@ -34,6 +34,24 @@ export type Profile = {
    * undefined = 아직 묻지 않음 / null = 건너뜀(모름)
    */
   partner?: PartnerInfo | null;
+  /**
+   * 재회 상담 정보 (재회운에서만, 모두 선택형) — 메모리에만, 저장 · 전송하지 않음
+   * 각 항목: undefined = 아직 묻지 않음
+   */
+  reunion?: ReunionInfo;
+};
+
+/* 재회 상담 — 값은 짧은 코드, 화면 문구는 content/products/reunion.ts 의 REUNION_LABELS */
+export type ReunionContact = "none" | "some" | "recent" | "ended" | "private";
+export type ReunionReason = "talk" | "time" | "future" | "cooled" | "conflict" | "unsure";
+export type ReunionQuestion = "chance" | "mind" | "missed" | "contact" | "closure";
+export type ReunionInfo = {
+  /** 헤어진 연월 · null = 기억나지 않음 · "private" = 말하고 싶지 않음 */
+  breakup?: { y: number; m: number } | null | "private";
+  contact?: ReunionContact;
+  /** 이별 이유에 대한 '사용자의 인식' (사실 판정이 아님) */
+  reason?: ReunionReason;
+  question?: ReunionQuestion;
 };
 
 export type PartnerInfo = {
@@ -62,11 +80,11 @@ export type Consult = {
   pendingTopic?: ConsultTopic | null;
   resumeNode?: NodeId | null;
   /** 리포트에서 '운결에게 더 물어보기'로 들어온 맥락 (id 만) */
-  ask?: { reportId: string; chapterId: string; q: number | null } | null;
+  ask?: { reportId: string; chapterId: string; q: number | null; productId?: string | null } | null;
 };
 
 /** 결과 계산에 쓰이는 정보 — 이 값이 바뀌면 이전 결과 카드는 무효 */
-export const RESULT_KEYS = ["calendar", "leap", "birth", "time", "gender", "mbti", "partner"] as const;
+export const RESULT_KEYS = ["calendar", "leap", "birth", "time", "gender", "mbti", "partner", "reunion"] as const;
 export const RESULT_CARDS = ["manse", "elements", "innate", "current", "compare", "insight"] as const;
 
 
@@ -84,7 +102,8 @@ export type CardKind =
   | "two-selves"
   | "meeting"
   | "saju-only"
-  | "topic"; // 운세 주제 샘플 풀이 (arg = TopicId)
+  | "topic" // 운세 주제 샘플 풀이 (arg = TopicId)
+  | "product"; // 주제별 리포트 무료 요약 → 리포트 미리보기 (arg = ProductId)
 
 export type CardLine = { card: CardKind; arg?: string };
 
@@ -114,6 +133,12 @@ export type NodeId =
   | "extra" // 상대방 정보 (재회 · 궁합, 선택)
   | "partnerDate"
   | "partnerMbti"
+  // 재회 상담 (PHASE 5)
+  | "reBreakup" // 헤어진 연월
+  | "reContact" // 이별 이후 연락
+  | "reReason" // 이별 이유에 대한 내 생각
+  | "reQuestion" // 가장 궁금한 것
+  | "reNote" // 질문에 대한 정직한 한마디 (자동 진행)
   | "editPick" // 고칠 항목 고르기
   | "switchTopic" // 다른 주제로 바꿀지 확인
   // 리포트 → 채팅 질문 (PHASE 4)
@@ -121,7 +146,7 @@ export type NodeId =
   | "askAnswer" // 미리 작성된 설명
   | `topic-${TopicId}`;
 
-export type InputField = "nickname" | "birthdate" | "birthtime" | "mbti" | "partnerDate" | "partnerMbti";
+export type InputField = "nickname" | "birthdate" | "birthtime" | "mbti" | "partnerDate" | "partnerMbti" | "breakup";
 
 /** 다음 노드: 특정 노드 또는 "@info" = 아직 받지 않은 정보 중 첫 번째 (이미 받은 정보는 다시 묻지 않음) */
 export type NextNode = NodeId | "@info";
@@ -132,6 +157,8 @@ export type ChoiceOption = {
   reply?: string;
   next?: NextNode;
   patch?: Partial<Profile>;
+  /** 재회 상담 정보 일부 (기존 값과 합침) */
+  reunion?: Partial<ReunionInfo>;
   /** 고민 · 세부 질문의 답으로 기록 */
   record?: { key: "concern" | "detail"; value: string; react?: string };
   /** 정보 고치기 시작 */

@@ -1,6 +1,11 @@
 import { TOPIC_IDS, TOPICS, type TopicId } from "@/features/saju/topics";
 import { needsPartner, TOPIC_FLOWS } from "./topicFlows";
 import { CHAPTER_ASKS, chapterMeta } from "@/content/report/chapters";
+import { PRODUCTS } from "@/content/products";
+import { OTHER_ASKS } from "@/content/products/others";
+import { REUNION_ASKS, REUNION_LABELS } from "@/content/products/reunion";
+import { productHref } from "@/features/products/routes";
+import { isProductId } from "@/features/products/types";
 import { reportHrefFor } from "@/features/report/handoff";
 import { isChapterId } from "@/features/report/types";
 import type { AutoNext, ChoiceOption, Consult, Line, NextNode, NodeId, Profile, Prompt, ScriptNode } from "./types";
@@ -179,7 +184,11 @@ export const SCRIPT: Record<NodeId, ScriptNode> = {
         "마지막으로 지금까지를 한데 모아 볼게요.",
         { card: "insight" },
         ...(p.partner && (p.partner.birth || p.partner.mbti)
-          ? ["상대방 정보도 받아 두었어요. 두 사람을 나란히 비교하는 풀이는 아직 준비 중이에요."]
+          ? ["상대방 정보도 받아 두었어요. 두 사람의 사주를 나란히 비교하는 계산은 아직 연결 전이에요."]
+          : []),
+        // 주제별 리포트 무료 요약 → 리포트 미리보기 (홈에서 상품 주제를 골라 들어온 상담)
+        ...(c.entry === "home" && isProductId(c.topic)
+          ? [`${PRODUCTS[c.topic].title}의 무료 요약이에요.`, { card: "product" as const, arg: c.topic }]
           : []),
         // 9 운세 주제 선택 — 홈에서 고른 주제가 있으면 맨 앞에 (상담 주제는 그대로 유지)
         ...(lead ? [lead] : []),
@@ -237,7 +246,7 @@ export const SCRIPT: Record<NodeId, ScriptNode> = {
     say: (_p, c) =>
       TOPIC_FLOWS[c.topic].partner === "encouraged"
         ? ["이제 상대방 정보를 여쭤볼게요.", "생년월일이나 MBTI를 알면 두 사람의 결을 나란히 볼 수 있어요.", "모르는 건 건너뛰어도 괜찮아요."]
-        : ["혹시 상대방 정보도 알고 있나요?", "알면 두 사람의 결을 나란히 볼 수 있어요. 몰라도 괜찮아요."],
+        : ["혹시 상대방 정보도 알고 있나요?", "알면 두 사람의 결을 나란히 볼 수 있어요. 몰라도 괜찮아요.", "상대방 정보도 저장하지 않고, 이 탭을 닫으면 사라져요."],
     then: {
       type: "choices",
       options: [
@@ -257,12 +266,62 @@ export const SCRIPT: Record<NodeId, ScriptNode> = {
     then: { type: "input", field: "partnerMbti", next: "@info" },
   },
 
+  /* ── 재회 상담: 이별 정보 (모두 선택형 · 건너뛸 수 있음) ── */
+  reBreakup: {
+    say: (_p, c) =>
+      c.editing
+        ? ["헤어진 때를 다시 알려주세요. 연도와 월만이면 돼요."]
+        : ["이제 이별에 대해 몇 가지만 여쭤볼게요.", "답하기 어려운 건 넘어가도 괜찮아요. 이 내용도 저장하지 않아요.", "헤어진 때는 언제쯤이에요? 연도와 월만 알려주세요."],
+    then: { type: "input", field: "breakup", next: "@info" },
+  },
+  reContact: {
+    say: ["헤어진 뒤 연락은 어땠어요?"],
+    then: {
+      type: "choices",
+      options: (["none", "some", "recent", "ended", "private"] as const).map((v) => ({
+        label: v === "private" ? "말하고 싶지 않아요" : REUNION_LABELS.contact[v],
+        reply: v === "private" ? "연락 이야기는 하고 싶지 않아요." : `${REUNION_LABELS.contact[v]}.`.replace("요..", "요."),
+        reunion: { contact: v },
+        next: "@info" as const,
+      })),
+    },
+  },
+  reReason: {
+    say: ["헤어진 이유는 어떻게 느끼고 있어요?", "누가 옳았는지 정하려는 게 아니에요. 지금 내 마음에 가까운 걸 골라 주세요."],
+    then: {
+      type: "choices",
+      options: (["talk", "time", "future", "cooled", "conflict", "unsure"] as const).map((v) => ({
+        label: REUNION_LABELS.reason[v],
+        reply: `${REUNION_LABELS.reason[v]}.`,
+        reunion: { reason: v },
+        next: "@info" as const,
+      })),
+    },
+  },
+  reQuestion: {
+    say: ["마지막으로, 가장 궁금한 건 무엇이에요?"],
+    then: {
+      type: "choices",
+      options: (["chance", "mind", "missed", "contact", "closure"] as const).map((v) => ({
+        label: REUNION_LABELS.question[v],
+        reply: v === "closure" || v === "mind" ? `${REUNION_LABELS.question[v]}.` : `${REUNION_LABELS.question[v]}?`,
+        reunion: { question: v },
+        next: "reNote" as const,
+      })),
+    },
+  },
+  // 궁금한 점에 대한 정직한 한마디 — 알 수 없는 것은 알 수 없다고 (질문 아님 → 자동 진행)
+  reNote: {
+    say: (p) => [REUNION_NOTE[p.reunion?.question ?? "chance"]],
+    then: { type: "auto", next: "@info" },
+  },
+
   /* ── 리포트에서 '운결에게 더 물어보기' — 미리 작성된 설명만 (실시간 AI 답변 아님) ── */
   askChapter: {
     say: (_p, c) => {
       const m = askMeta(c);
       return [
-        m ? `리포트 ‘${m.id} ${m.title}’ 챕터를 읽다가 오셨군요.` : "리포트를 읽다가 오셨군요.",
+        m ? `${m.product ? `${m.product} ` : "리포트 "}‘${m.id} ${m.title}’ 챕터를 읽다가 오셨군요.` : "리포트를 읽다가 오셨군요.",
         "궁금한 걸 골라 주세요.",
         "지금은 미리 준비해 둔 설명으로 답해 드려요. 실시간 AI 답변이 아니에요.",
       ];
@@ -293,11 +352,21 @@ export const SCRIPT: Record<NodeId, ScriptNode> = {
   },
 };
 
-/** 운세 주제 선택지 (8개) — 지금 상담 주제가 있으면 맨 앞에 */
+const REUNION_NOTE: Record<string, string> = {
+  chance: "다시 이어질지는 운세로 정해지지 않아요. 대신 두 사람의 결이 어디서 엇갈렸는지 함께 볼게요.",
+  mind: "상대방의 지금 마음은 사주나 MBTI로 알 수 없어요. 대신 두 사람이 어떻게 소통했는지, 내 마음은 무엇을 바라는지 볼게요.",
+  missed: "좋은 질문이에요. 나를 탓하지 않고, 다음에 알아차릴 신호를 찾는 쪽으로 볼게요.",
+  contact: "연락은 결국 당신이 정할 일이에요. 정할 때 살펴볼 점을 정리해 드릴게요.",
+  closure: "정리하는 마음도 소중해요. 차분히 함께 볼게요.",
+};
+
+/** 운세 주제 선택지 (8개) — 지금 상담 주제가 있으면 맨 앞에. 상품 주제면 그 리포트 미리보기도 */
 function topicOptions(c?: Consult): ChoiceOption[] {
   const tid = c ? topicOf(c) : null;
   const ids = tid ? [tid, ...TOPIC_IDS.filter((x) => x !== tid)] : [...TOPIC_IDS];
+  const product = c && c.entry === "home" && isProductId(c.topic) ? c.topic : null;
   return [
+    ...(product ? [{ label: `${PRODUCTS[product].title} 미리보기`, href: productHref(product, "my") }] : []),
     ...ids.map((id) => ({ label: TOPICS[id].label, reply: TOPICS[id].ask, next: `topic-${id}` as NodeId })),
     { label: "12챕터 종합 리포트", href: "/report/my" },
   ];
@@ -309,10 +378,7 @@ function topicNodes() {
   for (const id of TOPIC_IDS) {
     out[`topic-${id}`] = {
       say: [TOPICS[id].intro, { card: "topic", arg: id }, "더 깊은 풀이는 심층 리포트로 준비하고 있어요."],
-      then: {
-        type: "choices",
-        options: afterTopicOptions(),
-      },
+      then: (_p, c) => ({ type: "choices", options: afterTopicOptions(c) }),
     };
   }
   return out;
@@ -348,13 +414,23 @@ function leadLine(c: Consult): string | null {
   return c.entry === "home" && a ? `앞에서 고르신 ‘${a.label}’, 그 마음을 떠올리며 읽어 보세요.` : null;
 }
 
-function askMeta(c: Consult) {
+/** 리포트 질문의 챕터 — 종합 리포트(01~12) 또는 주제별 리포트(상품 id + 챕터 id) */
+function askMeta(c: Consult): { id: string; title: string; product: string | null } | null {
   const id = c.ask?.chapterId;
-  return id && isChapterId(id) ? chapterMeta(id) : null;
+  const pid = c.ask?.productId;
+  if (!id) return null;
+  if (isProductId(pid)) {
+    const ch = PRODUCTS[pid].chapters.find((x) => x.id === id);
+    return ch ? { id, title: ch.title, product: PRODUCTS[pid].title } : null;
+  }
+  return isChapterId(id) ? { id, title: chapterMeta(id).title, product: null } : null;
 }
 function askList(c: Consult) {
   const id = c.ask?.chapterId;
-  return id && isChapterId(id) ? CHAPTER_ASKS[id] : [];
+  const pid = c.ask?.productId;
+  if (!id) return [];
+  if (isProductId(pid)) return (pid === "reunion" ? REUNION_ASKS[id] : OTHER_ASKS[pid]?.[id]) ?? [];
+  return isChapterId(id) ? CHAPTER_ASKS[id] : [];
 }
 /** 리포트 질문 선택지 — 아직 안 고른 질문 · 리포트로 돌아가기 · 하던 상담 이어서 / 상담 시작 */
 function askOptions(c: Consult, picked: number | null): ChoiceOption[] {
@@ -362,7 +438,9 @@ function askOptions(c: Consult, picked: number | null): ChoiceOption[] {
     .map((a, i) => ({ a, i }))
     .filter(({ i }) => i !== picked)
     .map(({ a, i }) => ({ label: a.q, reply: a.q, askPick: i, next: "askAnswer" as const }));
-  const back: ChoiceOption = { label: "리포트로 돌아가기", href: reportHrefFor(c.ask?.reportId ?? "sample", c.ask?.chapterId) };
+  const pid = c.ask?.productId;
+  const rid = c.ask?.reportId === "my" ? "my" : "sample";
+  const back: ChoiceOption = { label: "리포트로 돌아가기", href: isProductId(pid) ? productHref(pid, rid, c.ask?.chapterId) : reportHrefFor(c.ask?.reportId ?? "sample", c.ask?.chapterId) };
   const cont: ChoiceOption = c.resumeNode
     ? { label: "하던 상담 이어서", reply: "하던 상담을 이어서 할게요.", resumeConsult: true }
     : { label: "운결과 상담 시작하기", reply: "상담을 시작해 볼게요.", next: c.entry === "home" ? "greet" : "welcome" };
@@ -370,8 +448,10 @@ function askOptions(c: Consult, picked: number | null): ChoiceOption[] {
 }
 
 /** 결과 뒤 선택지 */
-function afterTopicOptions(): ChoiceOption[] {
+function afterTopicOptions(c: Consult): ChoiceOption[] {
+  const product = c.entry === "home" && isProductId(c.topic) ? c.topic : null;
   return [
+    ...(product ? [{ label: `${PRODUCTS[product].title} 미리보기`, href: productHref(product, "my") }] : []),
     { label: "다른 주제도 볼래요", reply: "다른 주제도 볼래요.", next: "topics" },
     { label: "입력 정보 고치기", reply: "입력한 정보를 고칠게요.", next: "editPick" },
     { label: "종합 리포트 보기", href: "/report/my" },
@@ -389,6 +469,7 @@ function editOptions(c: Consult): ChoiceOption[] {
     e("MBTI", "MBTI를 고칠게요.", { mbti: undefined }),
     e("이름", "이름을 고칠게요.", { nickname: undefined }),
     ...(needsPartner(c.topic) ? [e("상대방 정보", "상대방 정보를 고칠게요.", { partner: undefined })] : []),
+    ...(c.topic === "reunion" ? [e("이별 정보", "이별 정보를 고칠게요.", { reunion: undefined })] : []),
     ...(c.entry === "home" ? [{ label: "고민 다시 고르기", reply: "고민을 다시 고를게요.", edit: true, next: "concernAgain" as const }] : []),
     { label: "고칠 게 없어요", reply: "고칠 건 없어요.", next: "confirm" },
   ];
@@ -407,6 +488,13 @@ export function nextInfoNode(p: Profile, c: Consult): NodeId {
   if (p.gender === undefined) return "askGender";
   if (p.mbti === undefined) return "askMbti";
   if (needsPartner(c.topic) && p.partner === undefined) return "extra";
+  if (c.topic === "reunion") {
+    const r = p.reunion ?? {};
+    if (r.breakup === undefined) return "reBreakup";
+    if (r.contact === undefined) return "reContact";
+    if (r.reason === undefined) return "reReason";
+    if (r.question === undefined) return "reQuestion";
+  }
   return "confirm";
 }
 

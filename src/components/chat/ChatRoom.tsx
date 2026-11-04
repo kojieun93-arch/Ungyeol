@@ -23,6 +23,8 @@ import { TypingIndicator } from "./TypingIndicator";
 import { BirthDateForm } from "./forms/BirthDateForm";
 import { BirthTimeForm } from "./forms/BirthTimeForm";
 import { MbtiForm } from "./forms/MbtiForm";
+import { BreakupForm } from "./forms/BreakupForm";
+import { isProductId } from "@/features/products/types";
 import { chatRootVars, READ, SPEC, u } from "./spec";
 
 /* ──────────────────────────────────────────────────────────
@@ -86,13 +88,20 @@ export function ChatRoom({
   topicParam = null,
   reportParam = null,
   chapterParam = null,
+  productParam = null,
 }: {
   topicParam?: string | null;
   reportParam?: string | null;
   chapterParam?: string | null;
+  /** 주제별 리포트(PHASE 5)에서 왔으면 상품 id */
+  productParam?: string | null;
 }) {
   const topic = parseTopic(topicParam);
-  const ask = reportParam && chapterParam && isReportId(reportParam) && isChapterId(chapterParam) ? { reportId: reportParam, chapterId: chapterParam } : null;
+  const product = isProductId(productParam) ? productParam : null;
+  const ask =
+    reportParam && chapterParam && isReportId(reportParam) && (product ? /^\d{2}$/.test(chapterParam) : isChapterId(chapterParam))
+      ? { reportId: reportParam, chapterId: chapterParam, productId: product }
+      : null;
   const [state, dispatch, restored] = useChatSequencer(topic);
   const reduced = useReducedMotion();
   const scroller = useRef<HTMLDivElement>(null);
@@ -108,11 +117,11 @@ export function ChatRoom({
   }, [topic, dispatch]);
 
   // 리포트에서 들어온 질문: 챕터 맥락의 선택지 (미리 작성된 설명만)
-  const askKey = ask ? `${ask.reportId}/${ask.chapterId}` : null;
+  const askKey = ask ? `${ask.reportId}/${ask.chapterId}/${ask.productId ?? ""}` : null;
   useEffect(() => {
     if (!askKey) return;
-    const [reportId, chapterId] = askKey.split("/");
-    dispatch({ type: "askChapter", reportId, chapterId, at: Date.now() });
+    const [reportId, chapterId, productId] = askKey.split("/");
+    dispatch({ type: "askChapter", reportId, chapterId, productId: productId || null, at: Date.now() });
   }, [askKey, dispatch]);
 
   const firstAt = state.messages[0]?.at;
@@ -358,7 +367,7 @@ function Footer({
         onChoose={(o: ChoiceOption) =>
           o.restart
             ? answer({ text: o.reply ?? o.label, restart: true })
-            : answer({ text: o.reply ?? o.label, next: o.next, patch: o.patch, record: o.record, edit: o.edit, switchTopic: o.switchTopic, askPick: o.askPick, resumeConsult: o.resumeConsult })
+            : answer({ text: o.reply ?? o.label, next: o.next, patch: o.patch, reunion: o.reunion, record: o.record, edit: o.edit, switchTopic: o.switchTopic, askPick: o.askPick, resumeConsult: o.resumeConsult })
         }
       />
     );
@@ -418,6 +427,22 @@ function Footer({
         );
         break;
       }
+      // 재회 상담: 헤어진 연월 (날짜는 받지 않음 · 기억나지 않음 / 말하고 싶지 않음 선택 가능)
+      case "breakup":
+        panel = sheet(
+          <BreakupForm
+            key={formKey}
+            birthYear={profile.birth?.y ?? null}
+            onSubmit={(v) =>
+              answer({
+                text: v === "private" ? "헤어진 때는 말하고 싶지 않아요." : v === null ? "헤어진 때가 정확히 기억나지 않아요." : `${v.y}년 ${v.m}월쯤 헤어졌어요.`,
+                next,
+                reunion: { breakup: v },
+              })
+            }
+          />,
+        );
+        break;
       case "partnerMbti":
         panel = sheet(
           <MbtiForm

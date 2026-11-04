@@ -13,7 +13,7 @@ const STAGE_LABEL: Record<Stage, string> = { concern: "고민 나누기", info: 
 
 export function stageOf(node: NodeId): Stage {
   if (node === "askName" || node === "askCalendar" || node === "askLeap" || node === "askDate" || node === "askTime" || node === "askGender" || node === "askMbti") return "info";
-  if (node === "extra" || node === "partnerDate" || node === "partnerMbti") return "extra";
+  if (node === "extra" || node === "partnerDate" || node === "partnerMbti" || node.startsWith("re")) return "extra";
   if (node === "confirm" || node === "editPick") return "confirm";
   if (node === "analyze" || node === "topics" || node.startsWith("topic-")) return "result";
   return "concern";

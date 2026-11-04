@@ -114,9 +114,14 @@ export type ReportAccessState = {
 /** 리포트 → 채팅 → 리포트 */
 export type ConsultationContext = {
   reportId: ReportId;
-  chapterId: ChapterId;
+  /** 종합 리포트는 "01"~"12", 주제별 리포트는 그 상품의 챕터 id */
+  chapterId: string;
+  /** 주제별 리포트(PHASE 5)에서 왔으면 상품 id. 종합 리포트면 없음 */
+  productId?: string | null;
   topic: TopicId | null;
   returnTo: { path: string; scrollY: number };
+  /** 떠날 때 리포트를 만든 상담 결과의 세대 (돌아왔을 때 정보가 바뀌었는지 비교) */
+  epoch?: number | null;
 };
 
 export const FREE_CHAPTERS: ChapterId[] = ["01", "04"];

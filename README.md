@@ -35,6 +35,9 @@ npm run build        # 프로덕션 빌드
 | `/report` | 종합 리포트 소개 · 12챕터 목차 | 구현 (판매 없음) |
 | `/report/sample`, `/report/my` | 12챕터 종합 리포트 (공개 01 · 04, 데모 체험) | 구현 (PHASE 4, **데모 사주**) |
 | `/report/[id]/chapter/[nn]` | 챕터 위치로 바로 | 구현 |
+| `/reports` | 주제별 리포트 7종 목록 | 구현 (PHASE 5, 판매 없음) |
+| `/reports/[productId]` | 상품 소개 · 받는 정보 · 목차 · 미리 읽기 · 가격/환불(미정) | 구현 |
+| `/reports/[productId]/[sample\|my]` (`/chapter/[nn]`) | 주제별 리포트 읽기 — 재회운 10챕터 완성, 나머지 6개는 구조 + 샘플 1챕터 | 구현 (**데모 사주**) |
 | `/explore` | 먼저 둘러보기 | 구현 |
 | `/scan`, `/mbti` | 준비 중 안내 (입력은 채팅 홈에서 진행) | 유지 |
 

@@ -1,3 +1,4 @@
+import { isFortuneId } from "@/content/fortunes";
 import { FIRST_NODE, resolveNext, resolveThen, SCRIPT } from "./script";
 import {
   RESULT_CARDS,
@@ -56,8 +57,9 @@ export type ChatAction =
       switchTopic?: ChoiceOption["switchTopic"];
       askPick?: number;
       resumeConsult?: boolean;
+      reunion?: ChoiceOption["reunion"];
     }
-  | { type: "askChapter"; reportId: string; chapterId: string; at: number }
+  | { type: "askChapter"; reportId: string; chapterId: string; productId?: string | null; at: number }
   | { type: "requestTopic"; topic: ConsultTopic; at: number }
   | { type: "restart" };
 
@@ -168,10 +170,12 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
 
       const id = `${state.session}-${state.seq + 1}`;
       const userMsg: Message = { id, from: "user", kind: "text", text: action.text, at: action.at };
-      const profile = action.patch ? { ...state.profile, ...action.patch } : state.profile;
+      let profile = action.patch ? { ...state.profile, ...action.patch } : state.profile;
+      // 재회 상담 정보는 항목별로 합침 (헤어진 연월 · 연락 · 이유 · 궁금한 점)
+      if (action.reunion) profile = { ...profile, reunion: { ...(profile.reunion ?? {}), ...action.reunion } };
 
       // 결과에 쓰인 정보를 바꾸면 이전 결과 카드는 무효 (새 세대)
-      const touchesResult = !!action.patch && RESULT_KEYS.some((k) => k in action.patch!);
+      const touchesResult = (!!action.patch && RESULT_KEYS.some((k) => k in action.patch!)) || !!action.reunion;
       const resultEpoch = touchesResult && hasCurrentResults(state) ? state.resultEpoch + 1 : state.resultEpoch;
 
       let consult: Consult = state.consult;
@@ -219,13 +223,15 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case "askChapter": {
       // 리포트에서 '운결에게 더 물어보기' — 같은 챕터 질문 중이면 그대로
       const c = state.consult;
-      const same = c.ask?.reportId === action.reportId && c.ask?.chapterId === action.chapterId;
+      const pid = action.productId ?? null;
+      const same = c.ask?.reportId === action.reportId && c.ask?.chapterId === action.chapterId && (c.ask?.productId ?? null) === pid;
       if (same && (state.node === "askChapter" || state.node === "askAnswer")) return state;
-      const ask = { reportId: action.reportId, chapterId: action.chapterId, q: null };
+      const ask = { reportId: action.reportId, chapterId: action.chapterId, q: null, productId: pid };
       const answered = state.messages.some((m) => m.from === "user");
       if (!answered) {
-        // 아직 상담 전: 질문부터 (상담은 이어서 시작할 수 있음)
-        const b = blank(state.session + 1, { ...newConsult(null), ask });
+        // 아직 상담 전: 질문부터 (상담은 이어서 시작할 수 있음 — 주제별 리포트면 그 주제 상담으로)
+        const topic = pid && isFortuneId(pid) ? pid : null;
+        const b = blank(state.session + 1, { ...newConsult(topic), ask });
         return { ...b, ...enqueue(b, "askChapter", {}, b.consult) };
       }
       const s = flushAll(state, action.at);

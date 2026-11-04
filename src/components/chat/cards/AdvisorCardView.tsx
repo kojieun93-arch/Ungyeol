@@ -4,6 +4,7 @@ import type { AdvisorCard, CardKind, Profile } from "@/features/chat/types";
 import { SampleResultCard } from "./SampleResultCard";
 import { SummaryCard } from "./SummaryCard";
 import { TopicCard } from "./TopicCard";
+import { ProductCard } from "./ProductCard";
 
 /**
  * 카드 종류 → 컴포넌트
@@ -44,5 +45,7 @@ export function AdvisorCardView({
       return <ChatReadingCard kind="innate" profile={profile} />;
     case "topic":
       return <TopicCard id={arg as TopicId} />;
+    case "product":
+      return <ProductCard id={arg ?? ""} profile={profile} context={context} stale={stale} />;
   }
 }

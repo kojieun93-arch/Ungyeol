@@ -15,6 +15,7 @@ import { reportHrefFor, takeReturn } from "@/features/report/handoff";
 import { isChapterId, type ChapterId, type Report, type ReportId } from "@/features/report/types";
 import { TOPICS, type TopicId } from "@/features/saju/topics";
 import { isDemo } from "@/features/saju/types";
+import { ReportTocSheet, useReveal } from "@/components/report/common";
 import { ChapterView, LockedChapter, Sheet } from "./Chapter";
 
 /* ──────────────────────────────────────────────────────────
@@ -34,29 +35,6 @@ function useReport(reportId: ReportId): { report: Report | null; ready: boolean 
     setState({ report: chat ? buildMyReport(chat.profile, chat.consult.topic) : null, ready: true });
   }, [reportId]);
   return state;
-}
-
-/** 스크롤로 들어오는 요소에 .is-in (한 번만) */
-function useReveal(dep: unknown) {
-  useEffect(() => {
-    const els = Array.from(document.querySelectorAll<HTMLElement>(".reveal:not(.is-in)"));
-    if (typeof IntersectionObserver === "undefined") {
-      els.forEach((e) => e.classList.add("is-in"));
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const en of entries)
-          if (en.isIntersecting) {
-            en.target.classList.add("is-in");
-            io.unobserve(en.target);
-          }
-      },
-      { rootMargin: "0px 0px -8% 0px", threshold: 0.01 },
-    );
-    els.forEach((e) => io.observe(e));
-    return () => io.disconnect();
-  }, [dep]);
 }
 
 const TOPIC_CHAPTER = (id: TopicId) => TOPICS[id].reportChapterId as ChapterId;
@@ -356,7 +334,14 @@ export function ReportReader({ reportId, chapterId = null }: { reportId: ReportI
         )}
       </div>
 
-      {toc && <TocSheet report={report} current={current} canRead={(id) => canRead(access, id)} onPick={goChapter} onClose={closeToc} />}
+      {toc && (
+        <ReportTocSheet
+          items={report.chapters.map((c) => ({ id: c.id, title: c.title, state: canRead(access, c.id) ? (c.access === "free" ? "공개" : "데모") : "잠김" }))}
+          current={current}
+          onPick={(id) => isChapterId(id) && goChapter(id)}
+          onClose={closeToc}
+        />
+      )}
 
       {viewer.kind && (
         <ReadingViewer
@@ -372,59 +357,6 @@ export function ReportReader({ reportId, chapterId = null }: { reportId: ReportI
           }}
         />
       )}
-    </div>
-  );
-}
-
-/** 목차 시트 — 지금 챕터 표시 · 잠김 표시 · Esc 닫기 */
-function TocSheet({ report, current, canRead: can, onPick, onClose }: { report: Report; current: ChapterId; canRead: (id: ChapterId) => boolean; onPick: (id: ChapterId) => void; onClose: () => void }) {
-  const first = useRef<HTMLButtonElement>(null);
-  const closeRef = useRef(onClose);
-  closeRef.current = onClose;
-  // 열릴 때 한 번만: 첫 버튼 포커스 · 배경 스크롤 잠금 · Esc (다시 렌더돼도 포커스를 뺏지 않음)
-  useEffect(() => {
-    first.current?.focus({ preventScroll: true });
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      document.removeEventListener("keydown", onKey);
-    };
-  }, []);
-  return (
-    <div role="dialog" aria-modal="true" aria-labelledby="toc-title" className="fixed inset-0 z-50 flex items-end justify-center">
-      <button type="button" tabIndex={-1} aria-label="목차 닫기" onClick={onClose} className="absolute inset-0 animate-scrim-in bg-black/55" />
-      <div className="relative max-h-[86dvh] w-full max-w-[480px] animate-sheet-in overflow-y-auto overscroll-contain rounded-t-[1.6rem] bg-[#fbf2e8] px-4 pt-4 text-[#3a2229]" style={{ paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}>
-        <div className="flex items-center justify-between">
-          <h2 id="toc-title" className="font-serif text-[18px] font-semibold text-[#4a1a2c]">
-            목차
-          </h2>
-          <button ref={first} type="button" onClick={onClose} aria-label="닫기" className="grid size-11 place-items-center rounded-full text-[#6e2a40]">
-            <svg viewBox="0 0 20 20" className="size-5" fill="none" aria-hidden>
-              <path d="m5 5 10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
-        <ol className="mt-1 divide-y divide-[#e6cdbd]">
-          {report.chapters.map((c) => (
-            <li key={c.id}>
-              <button
-                type="button"
-                onClick={() => onPick(c.id)}
-                aria-current={c.id === current ? "location" : undefined}
-                className={`flex min-h-12 w-full items-center gap-3 rounded-lg px-2 py-2 text-left ${c.id === current ? "bg-[#f2dfe0]" : ""}`}
-              >
-                <span className="w-7 shrink-0 font-serif text-[14px] text-[#9a7647] tabular-nums">{c.id}</span>
-                <span className="min-w-0 flex-1 text-[15.5px] [word-break:keep-all]">{c.title}</span>
-                {c.id === current && <span className="shrink-0 text-[11.5px] font-semibold text-[#974d5e]">읽는 중</span>}
-                <span className="shrink-0 text-[11.5px] text-[#7b6266]">{can(c.id) ? (c.access === "free" ? "공개" : "데모") : "잠김"}</span>
-              </button>
-            </li>
-          ))}
-        </ol>
-      </div>
     </div>
   );
 }
