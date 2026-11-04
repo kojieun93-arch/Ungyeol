@@ -1,0 +1,175 @@
+/* ──────────────────────────────────────────────────────────
+   운결 Design Tokens
+   결과(/result)·리포트(/report) 화면의 토큰을 채팅 화면과 같은
+   딥 플럼 · 버건디 · 크림 팔레트로 통일 (이름은 기존 컴포넌트 호환을 위해 유지)
+   - plum      : 바탕 (채팅 배경과 같은 계열)
+   - lavender  : '지금의 나' 강조 → 채팅 사용자 말풍선의 분홍 버건디 계열
+   - champagne : '타고난 나' 강조 → 채팅 포인트 샴페인 베이지 계열
+   - paper     : 리포트 지면 (상담자 말풍선과 같은 크림)
+   ────────────────────────────────────────────────────────── */
+
+@theme {
+  /* ── Plum (surface) ── */
+  --color-plum-950: #2e1c24;
+  --color-plum-900: #36222b;
+  --color-plum-850: #3f2a31;
+  --color-plum-800: #4a2934;
+  --color-plum-700: #5a3542;
+  --color-plum-600: #6e4553;
+  --color-plum-500: #87606c;
+
+  /* ── Lavender → 분홍 버건디 (지금의 나) ── */
+  --color-lavender-100: #f9e9ec;
+  --color-lavender-200: #f1c9d1;
+  --color-lavender-300: #e0a3b0;
+  --color-lavender-400: #c96f81;
+  --color-lavender-500: #a15768;
+
+  /* ── Champagne → 샴페인 베이지 (타고난 나) ── */
+  --color-champagne-100: #fbf3ea;
+  --color-champagne-200: #f3e2cf;
+  --color-champagne-300: #e8c9ac;
+  --color-champagne-400: #d4ad8c;
+  --color-champagne-500: #b58b6b;
+
+  /* ── Paper (report pages) ── */
+  --color-paper: #faede0;
+  --color-paper-deep: #efdcca;
+  --color-ink: #2b1d24;
+  --color-ink-soft: #6b5a5e;
+
+  /* ── Foreground on dark ── */
+  --color-fg: #f8f3ee;
+  --color-fg-muted: #e2d3d0;
+  --color-fg-subtle: #bdaaac;
+  --color-fg-faint: #8a7477;
+
+  /* ── Lines ── */
+  --color-line: rgb(231 195 187 / 0.16);
+  --color-line-strong: rgb(231 195 187 / 0.28);
+
+  /* ── Chat — 디자인 원본(03-chat.png)에서 추출한 값 ── */
+  --color-chat-bg: #36222b;          /* 화면 바탕 (중앙부 평균) */
+  --color-chat-surface: #3f2a31;     /* 입력창 면 */
+  --color-chat-raise: #4e363f;       /* 날짜 알약 */
+  --color-chat-line: rgb(231 195 187 / 0.28);
+  --color-chat-advisor: #faede0;     /* 상담자 말풍선 크림 */
+  --color-chat-advisor-rim: #fff6ed; /* 상담자 말풍선 윗선 하이라이트 */
+  --color-chat-advisor-ink: #1d1216;
+  --color-chat-advisor-soft: #7a6266;
+  --color-chat-user: #974d5e;        /* 사용자 말풍선 분홍 버건디 */
+  --color-chat-user-rim: #c96f81;    /* 사용자 말풍선 테두리 */
+  --color-chat-user-ink: #ffffff;
+  --color-chat-send: #a15768;        /* 전송 버튼 */
+  --color-chat-chip: #4a2934;        /* 칩 면 */
+  --color-chat-chip-stroke: #b06c7c; /* 칩·원형 버튼 테두리 */
+  --color-chat-chip-icon: #f1b0ba;   /* 칩 아이콘 */
+  --color-chat-field-stroke: #e7c3bb;/* 입력창 테두리 */
+  --color-chat-accent: #e7c3bb;
+  --color-chat-text: #ffffff;
+  --color-chat-muted: #e9d6d2;       /* 시간 */
+  --color-chat-subtle: #bdaaac;      /* 입력창 안내 문구 */
+  --color-chat-error: #ffb4a8;
+
+  /* ── Intro (첫 소개 화면) ── */
+  --color-intro-bg: #2f1926;         /* 로고 원본 바탕색 (01-logo.png) */
+  --color-intro-image: #3b2131;
+  --color-intro-cream: #f8f3ee;
+  --color-intro-muted: #d9cbd0;
+  --color-intro-seal: #8f2f3a;
+
+  /* ── Typography ── */
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  --font-serif: var(--font-serif-kr), "Nanum Myeongjo", "AppleMyungjo", serif;
+  --font-italic: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+
+  /* ── Easing ── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-drift: cubic-bezier(0.45, 0.05, 0.55, 0.95);
+
+  /* ── Motion ── */
+  --animate-rise: rise 1.2s var(--ease-out-expo) both;
+  --animate-fade: fade 1.6s var(--ease-soft) both;
+  --animate-moon-glow: moon-glow 7s var(--ease-drift) infinite;
+  --animate-thread: thread-draw 3.2s var(--ease-out-expo) both;
+  --animate-msg-in: msg-in 360ms var(--ease-out-expo) both;
+  --animate-typing-dot: typing-dot 1.2s ease-in-out infinite;
+  --animate-panel-in: panel-in 320ms var(--ease-out-expo) both;
+  --animate-intro-image: intro-image 1.6s var(--ease-out-expo) both;
+  --animate-viewer-in: viewer-in 340ms var(--ease-out-expo) both;
+  --animate-viewer-out: viewer-out 200ms var(--ease-soft) both;
+  --animate-scrim-in: scrim-in 260ms var(--ease-soft) both;
+  --animate-swap-next: swap-next 280ms var(--ease-out-expo) both;
+  --animate-swap-prev: swap-prev 280ms var(--ease-out-expo) both;
+  --animate-sheet-in: sheet-in 300ms var(--ease-out-expo) both;
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); filter: blur(4px); }
+    to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+  }
+  @keyframes fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  /* 달무리가 숨 쉬듯 */
+  @keyframes moon-glow {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50%      { opacity: 0.85; transform: scale(1.05); }
+  }
+  /* 두 가닥의 결이 그려짐 */
+  @keyframes thread-draw {
+    from { stroke-dashoffset: 1; opacity: 0; }
+    20%  { opacity: 1; }
+    to   { stroke-dashoffset: 0; opacity: 1; }
+  }
+
+  /* 메시지 등장: 투명도 + 아래에서 살짝 */
+  @keyframes msg-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  /* 입력 중 점 세 개 */
+  @keyframes typing-dot {
+    0%, 60%, 100% { opacity: 0.35; transform: translateY(0); }
+    30%           { opacity: 1;    transform: translateY(-2px); }
+  }
+  /* 인트로 캐릭터: 아주 약한 확대 → 제자리 */
+  @keyframes intro-image {
+    from { opacity: 0; transform: scale(1.035); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  /* 하단 답변 영역 등장 */
+  @keyframes panel-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  /* 결과 카드 전체 화면: 카드가 살짝 다가오듯 열리고, 반대로 닫힘 */
+  @keyframes viewer-in {
+    from { opacity: 0; transform: translateY(14px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes viewer-out {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to   { opacity: 0; transform: translateY(10px) scale(0.98); }
+  }
+  @keyframes scrim-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  /* 이전·다음 카드로 넘길 때 */
+  @keyframes swap-next {
+    from { opacity: 0; transform: translateX(18px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes swap-prev {
+    from { opacity: 0; transform: translateX(-18px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  /* 아래에서 올라오는 시트 */
+  @keyframes sheet-in {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}

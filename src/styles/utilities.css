@@ -1,0 +1,111 @@
+/* ──────────────────────────────────────────────────────────
+   운결 Utilities — Atelier
+   타이포 / 베일(유리) / 빛 / 그라데이션 / 지면
+   ────────────────────────────────────────────────────────── */
+
+/* ── Typography: 명조 제목 + 고딕 본문 + 이탤릭 세리프 라벨 ── */
+@utility type-display {
+  font-family: var(--font-serif);
+  font-size: clamp(1.75rem, 7.6vw, 2.125rem);
+  line-height: 1.36;
+  letter-spacing: -0.035em;
+  font-weight: 500;
+}
+@utility type-title {
+  font-family: var(--font-serif);
+  font-size: 1.4375rem;
+  line-height: 1.42;
+  letter-spacing: -0.03em;
+  font-weight: 500;
+}
+@utility type-subtitle {
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  line-height: 1.5;
+  letter-spacing: -0.025em;
+  font-weight: 500;
+}
+@utility type-heading {
+  font-size: 1rem;
+  line-height: 1.5;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+}
+@utility type-body {
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  letter-spacing: -0.01em;
+}
+@utility type-small {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  letter-spacing: -0.005em;
+}
+/* 'Chapter 01', 'Vol. 01' 같은 에디토리얼 라벨 */
+@utility type-italic {
+  font-family: var(--font-italic);
+  font-style: italic;
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+@utility type-eyebrow {
+  font-size: 0.6875rem;
+  line-height: 1;
+  letter-spacing: 0.22em;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+/* ── Veil: 카드 면 ── */
+@utility veil {
+  /* 채팅 입력창과 같은 면 (블러·그라데이션 없음) */
+  background: var(--color-plum-850);
+  border: 1px solid var(--color-line);
+}
+
+/* ── 테두리 강조 (빛 번짐 없음) ── */
+@utility glow-moon {
+  box-shadow: 0 0 0 1px rgb(232 201 172 / 0.3);
+}
+@utility glow-soft {
+  filter: none;
+}
+
+/* ── 강조 글자색 ── */
+@utility text-champagne {
+  color: var(--color-champagne-300);
+}
+@utility text-lavender {
+  color: var(--color-lavender-300);
+}
+
+/* ── 면 ── */
+@utility bg-gyeol {
+  /* 채팅 포인트 색 (단색) */
+  background: var(--color-champagne-300);
+}
+@utility bg-night {
+  background: var(--color-plum-950);
+}
+
+/* ── Paper: 리포트 지면 ── */
+@utility paper {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.5) inset, 0 12px 28px -18px rgb(0 0 0 / 0.6);
+}
+
+/* ── Hairline ── */
+@utility hairline {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-line-strong), transparent);
+}
+
+/* 가로 스크롤 영역 스크롤바 숨김 */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

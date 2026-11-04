@@ -1,0 +1,58 @@
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
+@import "tailwindcss";
+@import "../styles/theme.css";
+@import "../styles/utilities.css";
+
+/* 세로가 짧은 화면(아이폰 SE·미니 등) 대응 */
+@custom-variant short (@media (max-height: 720px));
+@custom-variant tiny (@media (max-height: 600px));
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background: var(--color-plum-950);
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+    color: var(--color-fg);
+    background: var(--color-plum-950);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: rgb(223 199 159 / 0.3);
+    color: var(--color-fg);
+  }
+
+  :focus-visible {
+    outline: 1.5px solid var(--color-champagne-300);
+    outline-offset: 3px;
+  }
+}
+
+/* 모션 최소화 설정 존중
+   - 진입 애니메이션은 즉시 최종 상태
+   - 반복 모션(data-motion="loop")은 정지
+   - 상태 전환은 짧은 페이드만 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 120ms !important;
+    scroll-behavior: auto !important;
+  }
+  [data-motion="loop"] {
+    animation: none !important;
+  }
+}
