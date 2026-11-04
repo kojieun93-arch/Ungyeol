@@ -25,5 +25,7 @@ export default async function ChatPage({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const raw = sp.topic;
   const topic = Array.isArray(raw) ? raw[0] : raw;
-  return <ChatRoom topicParam={topic ?? null} />;
+  // 리포트에서 '운결에게 더 물어보기' (리포트 · 챕터 id 만)
+  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? null;
+  return <ChatRoom topicParam={topic ?? null} reportParam={one(sp.report)} chapterParam={one(sp.chapter)} />;
 }

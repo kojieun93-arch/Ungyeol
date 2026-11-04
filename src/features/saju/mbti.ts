@@ -62,3 +62,11 @@ export const isLetter = (c: string): c is MbtiLetter => "EISNTFJP".includes(c);
 export function axisDifference(ref: MbtiLetter, sel: MbtiLetter, refType: string, selType: string) {
   return AXIS_DIFF[AXIS[ref].axis](ref, sel, refType, selType);
 }
+
+/** 에너지(E/I) × 판단(F/T) 으로 본 관계 방식 */
+export const RELATION_STYLE: Record<string, string> = {
+  EF: "사람 사이에서 마음을 나누며 가까워지는 편이에요. 분위기를 따뜻하게 만드는 역할을 자주 맡아요.",
+  ET: "함께 일하며 가까워지는 편이에요. 솔직하고 분명한 대화를 편하게 느껴요.",
+  IF: "소수의 사람과 깊게 이어지는 편이에요. 마음을 열기까지 시간이 걸리지만, 한번 열면 오래가요.",
+  IT: "거리를 존중하는 관계를 편하게 느껴요. 말보다 믿을 만한 행동으로 신뢰를 쌓는 편이에요.",
+};

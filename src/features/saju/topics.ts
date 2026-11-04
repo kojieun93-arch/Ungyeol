@@ -17,6 +17,8 @@ export type Topic = {
   practice: string;
   note?: string;
   reportChapter: string;
+  /** 종합 리포트에서 이어 읽을 챕터 */
+  reportChapterId: string;
 };
 
 export const TOPICS: Record<TopicId, Topic> = {
@@ -31,7 +33,8 @@ export const TOPICS: Record<TopicId, Topic> = {
       "상대의 마음을 먼저 살피다 보니, 정작 내 마음을 말할 타이밍을 놓치기 쉬워요.",
     ],
     practice: "좋았던 순간을 그날 안에 한 문장으로 전해 보세요.",
-    reportChapter: "Chapter 4 · 사랑의 결",
+    reportChapter: "05 연애와 인연의 흐름",
+    reportChapterId: "05",
   },
   reunion: {
     id: "reunion",
@@ -44,7 +47,8 @@ export const TOPICS: Record<TopicId, Topic> = {
       "다만 재회는 두 사람의 지금 마음에 달린 일이라, 사주만으로 결과를 말할 수는 없어요.",
     ],
     practice: "그 사람이 아니라 ‘그때의 나’에게 무엇이 필요했는지 먼저 적어 보세요.",
-    reportChapter: "Chapter 4 · 사랑의 결",
+    reportChapter: "06 재회와 궁합",
+    reportChapterId: "06",
   },
   compat: {
     id: "compat",
@@ -58,7 +62,8 @@ export const TOPICS: Record<TopicId, Topic> = {
     ],
     practice: "함께 있을 때 내가 가장 ‘나답게’ 말하게 되는 사람을 떠올려 보세요.",
     note: "상대방 정보를 알려주셨어도, 두 사람을 실제로 비교하는 풀이는 만세력 계산이 연결된 뒤에 열려요.",
-    reportChapter: "Chapter 6 · 관계의 결",
+    reportChapter: "06 재회와 궁합",
+    reportChapterId: "06",
   },
   wealth: {
     id: "wealth",
@@ -71,7 +76,8 @@ export const TOPICS: Record<TopicId, Topic> = {
       "의미를 느끼는 곳에는 아낌없이 쓰는 경향이 있어, 지출의 이유를 기록하면 흐름이 선명해져요.",
     ],
     practice: "이번 달 ‘의미 있었던 지출’ 세 가지만 적어 보세요.",
-    reportChapter: "Chapter 5 · 일과 재물의 결",
+    reportChapter: "07 재물과 기회의 흐름",
+    reportChapterId: "07",
   },
   career: {
     id: "career",
@@ -84,7 +90,8 @@ export const TOPICS: Record<TopicId, Topic> = {
       "사람과 이야기를 다루는 일, 혼자 깊이 몰입할 시간이 보장되는 환경에서 강점이 드러나기 쉬워요.",
     ],
     practice: "지금 하는 일을 ‘내가 왜 하는지’ 한 줄로 정리해 보세요.",
-    reportChapter: "Chapter 5 · 일과 재물의 결",
+    reportChapter: "08 직업과 적성",
+    reportChapterId: "08",
   },
   relation: {
     id: "relation",
@@ -97,7 +104,8 @@ export const TOPICS: Record<TopicId, Topic> = {
       "배려가 습관이 되어 지치기 쉬우니, 혼자 회복할 시간을 미리 정해 두면 좋아요.",
     ],
     practice: "이번 주, 나를 위한 빈 저녁 하나를 달력에 먼저 적어 두세요.",
-    reportChapter: "Chapter 6 · 관계의 결",
+    reportChapter: "09 인간관계와 사회운",
+    reportChapterId: "09",
   },
   year2027: {
     id: "year2027",
@@ -111,7 +119,8 @@ export const TOPICS: Record<TopicId, Topic> = {
     ],
     practice: "올해 꺼내 보이고 싶은 작업이나 생각 하나를 정해 두세요.",
     note: "특정 사건을 예측하지 않는 참고용 읽기예요.",
-    reportChapter: "Chapter 7 · 2027 정미년의 흐름",
+    reportChapter: "11 2027년 월별 운세",
+    reportChapterId: "11",
   },
   overall: {
     id: "overall",
@@ -124,6 +133,7 @@ export const TOPICS: Record<TopicId, Topic> = {
       "정리하고 매듭짓는 힘(金)이 적은 편이라, 마무리를 도와줄 사람이나 습관이 큰 힘이 돼요.",
     ],
     practice: "미뤄 둔 일 하나를 오늘 ‘끝’이라고 이름 붙여 마무리해 보세요.",
-    reportChapter: "Prologue · 두 결의 지도",
+    reportChapter: "12 나를 위한 종합 조언",
+    reportChapterId: "12",
   },
 };

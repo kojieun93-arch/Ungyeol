@@ -8,6 +8,7 @@ import { ReadingViewer } from "@/components/reading/ReadingViewer";
 import { ReadingActionsContext, useReadingViewer, type ReadingActions } from "@/components/reading/useReadingViewer";
 import { TOPICS, type TopicId } from "@/features/saju/topics";
 import { isFortuneId } from "@/content/fortunes";
+import { isChapterId, isReportId } from "@/features/report/types";
 import { ConsultProgress } from "./ConsultProgress";
 import { formatBirth, formatBirthTime, formatDay } from "@/features/chat/format";
 import { useAutoScroll, useChatSequencer, useReducedMotion, useVisualViewportVars } from "@/features/chat/hooks";
@@ -81,8 +82,17 @@ export function parseTopic(v: string | null | undefined): ConsultTopic | null {
   return isFortuneId(v) ? v : "overall";
 }
 
-export function ChatRoom({ topicParam = null }: { topicParam?: string | null }) {
+export function ChatRoom({
+  topicParam = null,
+  reportParam = null,
+  chapterParam = null,
+}: {
+  topicParam?: string | null;
+  reportParam?: string | null;
+  chapterParam?: string | null;
+}) {
   const topic = parseTopic(topicParam);
+  const ask = reportParam && chapterParam && isReportId(reportParam) && isChapterId(chapterParam) ? { reportId: reportParam, chapterId: chapterParam } : null;
   const [state, dispatch, restored] = useChatSequencer(topic);
   const reduced = useReducedMotion();
   const scroller = useRef<HTMLDivElement>(null);
@@ -96,6 +106,14 @@ export function ChatRoom({ topicParam = null }: { topicParam?: string | null }) 
   useEffect(() => {
     if (topic) dispatch({ type: "requestTopic", topic, at: Date.now() });
   }, [topic, dispatch]);
+
+  // 리포트에서 들어온 질문: 챕터 맥락의 선택지 (미리 작성된 설명만)
+  const askKey = ask ? `${ask.reportId}/${ask.chapterId}` : null;
+  useEffect(() => {
+    if (!askKey) return;
+    const [reportId, chapterId] = askKey.split("/");
+    dispatch({ type: "askChapter", reportId, chapterId, at: Date.now() });
+  }, [askKey, dispatch]);
 
   const firstAt = state.messages[0]?.at;
   useEffect(() => setOpenedAt(firstAt ?? Date.now()), [state.session, firstAt]);
@@ -340,7 +358,7 @@ function Footer({
         onChoose={(o: ChoiceOption) =>
           o.restart
             ? answer({ text: o.reply ?? o.label, restart: true })
-            : answer({ text: o.reply ?? o.label, next: o.next, patch: o.patch, record: o.record, edit: o.edit, switchTopic: o.switchTopic })
+            : answer({ text: o.reply ?? o.label, next: o.next, patch: o.patch, record: o.record, edit: o.edit, switchTopic: o.switchTopic, askPick: o.askPick, resumeConsult: o.resumeConsult })
         }
       />
     );

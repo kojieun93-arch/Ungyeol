@@ -56,3 +56,29 @@
     animation: none !important;
   }
 }
+
+/* 리포트: 스크롤로 들어올 때 부드럽게 (한 번만, 흔들림 · 패럴랙스 없음) */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 600ms var(--ease-out-expo),
+    transform 600ms var(--ease-out-expo);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* 접었다 펼치는 추가 설명: 기본 삼각형 숨김 */
+.report-more > summary {
+  list-style: none;
+}
+.report-more > summary::-webkit-details-marker {
+  display: none;
+}

@@ -36,7 +36,7 @@ export function ShareSheet({ kind, r, intent, onClose }: { kind: ReadingKind; r:
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [busy, setBusy] = useState(false);
   const title = READING_META[kind].title;
-  const name = fileName(title);
+  const name = fileName(kind);
   const Card = CARD_COMPONENT[kind];
 
   // 1) 이미지 만들기

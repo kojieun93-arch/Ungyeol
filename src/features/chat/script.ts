@@ -1,5 +1,8 @@
 import { TOPIC_IDS, TOPICS, type TopicId } from "@/features/saju/topics";
 import { needsPartner, TOPIC_FLOWS } from "./topicFlows";
+import { CHAPTER_ASKS, chapterMeta } from "@/content/report/chapters";
+import { reportHrefFor } from "@/features/report/handoff";
+import { isChapterId } from "@/features/report/types";
 import type { AutoNext, ChoiceOption, Consult, Line, NextNode, NodeId, Profile, Prompt, ScriptNode } from "./types";
 
 /* ──────────────────────────────────────────────────────────
@@ -254,6 +257,26 @@ export const SCRIPT: Record<NodeId, ScriptNode> = {
     then: { type: "input", field: "partnerMbti", next: "@info" },
   },
 
+  /* ── 리포트에서 '운결에게 더 물어보기' — 미리 작성된 설명만 (실시간 AI 답변 아님) ── */
+  askChapter: {
+    say: (_p, c) => {
+      const m = askMeta(c);
+      return [
+        m ? `리포트 ‘${m.id} ${m.title}’ 챕터를 읽다가 오셨군요.` : "리포트를 읽다가 오셨군요.",
+        "궁금한 걸 골라 주세요.",
+        "지금은 미리 준비해 둔 설명으로 답해 드려요. 실시간 AI 답변이 아니에요.",
+      ];
+    },
+    then: (_p, c) => ({ type: "choices", options: askOptions(c, null) }),
+  },
+  askAnswer: {
+    say: (_p, c) => {
+      const a = askList(c)[c.ask?.q ?? -1];
+      return [...(a?.answer ?? []), "더 궁금한 게 있나요?"];
+    },
+    then: (_p, c) => ({ type: "choices", options: askOptions(c, c.ask?.q ?? null) }),
+  },
+
   // 다른 주제로 바꿀지 확인 (홈에서 다른 주제를 골라 돌아왔을 때)
   switchTopic: {
     say: (_p, c) => [
@@ -274,7 +297,10 @@ export const SCRIPT: Record<NodeId, ScriptNode> = {
 function topicOptions(c?: Consult): ChoiceOption[] {
   const tid = c ? topicOf(c) : null;
   const ids = tid ? [tid, ...TOPIC_IDS.filter((x) => x !== tid)] : [...TOPIC_IDS];
-  return ids.map((id) => ({ label: TOPICS[id].label, reply: TOPICS[id].ask, next: `topic-${id}` as NodeId }));
+  return [
+    ...ids.map((id) => ({ label: TOPICS[id].label, reply: TOPICS[id].ask, next: `topic-${id}` as NodeId })),
+    { label: "12챕터 종합 리포트", href: "/report/my" },
+  ];
 }
 
 /** 주제별 짧은 응답 + 샘플 풀이 카드 → 다른 주제 / 리포트 미리보기 */
@@ -322,12 +348,33 @@ function leadLine(c: Consult): string | null {
   return c.entry === "home" && a ? `앞에서 고르신 ‘${a.label}’, 그 마음을 떠올리며 읽어 보세요.` : null;
 }
 
+function askMeta(c: Consult) {
+  const id = c.ask?.chapterId;
+  return id && isChapterId(id) ? chapterMeta(id) : null;
+}
+function askList(c: Consult) {
+  const id = c.ask?.chapterId;
+  return id && isChapterId(id) ? CHAPTER_ASKS[id] : [];
+}
+/** 리포트 질문 선택지 — 아직 안 고른 질문 · 리포트로 돌아가기 · 하던 상담 이어서 / 상담 시작 */
+function askOptions(c: Consult, picked: number | null): ChoiceOption[] {
+  const qs = askList(c)
+    .map((a, i) => ({ a, i }))
+    .filter(({ i }) => i !== picked)
+    .map(({ a, i }) => ({ label: a.q, reply: a.q, askPick: i, next: "askAnswer" as const }));
+  const back: ChoiceOption = { label: "리포트로 돌아가기", href: reportHrefFor(c.ask?.reportId ?? "sample", c.ask?.chapterId) };
+  const cont: ChoiceOption = c.resumeNode
+    ? { label: "하던 상담 이어서", reply: "하던 상담을 이어서 할게요.", resumeConsult: true }
+    : { label: "운결과 상담 시작하기", reply: "상담을 시작해 볼게요.", next: c.entry === "home" ? "greet" : "welcome" };
+  return [...qs, back, cont];
+}
+
 /** 결과 뒤 선택지 */
 function afterTopicOptions(): ChoiceOption[] {
   return [
     { label: "다른 주제도 볼래요", reply: "다른 주제도 볼래요.", next: "topics" },
     { label: "입력 정보 고치기", reply: "입력한 정보를 고칠게요.", next: "editPick" },
-    { label: "리포트 미리보기", href: "/report" },
+    { label: "종합 리포트 보기", href: "/report/my" },
     { label: "처음부터 다시", reply: "처음부터 다시 할게요.", restart: true },
   ];
 }

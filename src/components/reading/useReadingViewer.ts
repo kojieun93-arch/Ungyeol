@@ -25,6 +25,13 @@ export function useReadingViewer(reduced: boolean) {
 
   const finishClose = useCallback(() => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
+    if (reduced) {
+      // 모션 줄이기: 닫힘 애니메이션 단계 없이 바로 닫음
+      refocus.current = true;
+      setClosing(false);
+      setKind(null);
+      return;
+    }
     setClosing(true);
     closeTimer.current = setTimeout(
       () => {

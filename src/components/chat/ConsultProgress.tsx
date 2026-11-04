@@ -20,6 +20,14 @@ export function stageOf(node: NodeId): Stage {
 }
 
 export function ConsultProgress({ node, consult }: { node: NodeId; consult: Consult }) {
+  // 리포트에서 들어온 질문 중에는 단계 대신 어느 챕터의 질문인지 표시
+  if (node === "askChapter" || node === "askAnswer")
+    return (
+      <div className="relative z-20 flex h-8 shrink-0 items-center justify-center gap-2 px-4 text-[11.5px] leading-none text-chat-muted" role="status" aria-label="리포트 질문">
+        <span className="font-medium text-white/90">리포트 질문</span>
+        <span>· {consult.ask?.chapterId ?? ""} 챕터</span>
+      </div>
+    );
   const stages: Stage[] = ["concern", "info", ...(needsPartner(consult.topic) ? (["extra"] as Stage[]) : []), "confirm", "result"];
   // 주제 전환 확인 중에는 이전 단계를 그대로 보여 줌
   const shown = node === "switchTopic" && consult.resumeNode ? consult.resumeNode : node;

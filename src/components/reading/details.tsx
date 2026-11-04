@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { ELEMENTS, ELEMENT_ORDER, elementLabel } from "@/features/saju/elements";
 import { isDemo, type ElementKey, type MbtiLetter, type ReadingResult } from "@/features/saju/types";
+import { RELATION_STYLE } from "@/features/saju/mbti";
+import { relationTo } from "@/features/saju/relations";
 import type { ReadingKind } from "./cards";
 
 /* ──────────────────────────────────────────────────────────
@@ -15,24 +17,6 @@ const PILLAR_MEANING: Record<string, { image: string; text: string }> = {
   hour: { image: "열매", text: "앞으로의 방향과 아랫사람과의 관계, 삶의 후반부로 읽어요." },
 };
 
-const GENERATES: Record<ElementKey, ElementKey> = { wood: "fire", fire: "earth", earth: "metal", metal: "water", water: "wood" };
-const CONTROLS: Record<ElementKey, ElementKey> = { wood: "earth", earth: "water", water: "fire", fire: "metal", metal: "wood" };
-
-/** 일간 기준으로 다른 오행이 어떤 관계인지 (전통 십성의 다섯 갈래) */
-function relationTo(dm: ElementKey, other: ElementKey) {
-  if (dm === other) return { name: "비겁", text: "나와 같은 기운 — 나를 지탱하는 힘, 곁의 동료" };
-  if (GENERATES[dm] === other) return { name: "식상", text: "내가 만들어 내는 기운 — 표현과 재능" };
-  if (CONTROLS[dm] === other) return { name: "재성", text: "내가 다루는 기운 — 재물과 성과" };
-  if (CONTROLS[other] === dm) return { name: "관성", text: "나를 다듬는 기운 — 규범과 책임" };
-  return { name: "인성", text: "나를 돕는 기운 — 배움과 보살핌" };
-}
-
-const RELATION_STYLE: Record<string, string> = {
-  EF: "사람 사이에서 마음을 나누며 가까워지는 편이에요. 분위기를 따뜻하게 만드는 역할을 자주 맡아요.",
-  ET: "함께 일하며 가까워지는 편이에요. 솔직하고 분명한 대화를 편하게 느껴요.",
-  IF: "소수의 사람과 깊게 이어지는 편이에요. 마음을 열기까지 시간이 걸리지만, 한번 열면 오래가요.",
-  IT: "거리를 존중하는 관계를 편하게 느껴요. 말보다 믿을 만한 행동으로 신뢰를 쌓는 편이에요.",
-};
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (

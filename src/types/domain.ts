@@ -4,7 +4,7 @@
    층 구분
    ① 입력      UserProfile · BirthInformation · SelfReportedMBTI · ConsultationSession
    ② 계산      ManseResult · FiveElementDistribution            ← 만세력 엔진(HRUM) 영역. 해석 문장 없음
-   ③ 해석      SajuPersonality · SajuMBTIReferenceType · SajuMBTIComparison · FortuneReport · ReportChapter
+   ③ 해석      SajuPersonality · SajuMBTIReferenceType · SajuMBTIComparison · Report · ReportChapter (features/report/types.ts)
                                                                 ← 규칙 기반(지금) 또는 AI 해석(나중). 계산값을 바꾸지 않음
    ④ 판매      PurchaseStatus                                    ← 결제 미구현. 테스트 UI 전용 상태만
 
@@ -89,42 +89,17 @@ export type SajuMBTIReferenceType = {
   method: "ungyeol-day-master-analogy";
 };
 
-export type ChapterVisual =
-  | { kind: "manse-table" }
-  | { kind: "element-radar" }
-  | { kind: "type-compare" }
-  | { kind: "timeline"; points: { label: string; text: string }[] }
-  | { kind: "month-grid"; months: { month: number; keyword: string; text: string }[] }
-  | { kind: "pair-compare"; left: string; right: string; rows: { label: string; left: string; right: string }[] }
-  | { kind: "none" };
-
-export type ReportChapter = {
-  no: number; // 1 ~ 12
-  id: string;
-  title: string;
-  summary: string; // 핵심 요약 (2~3문장)
-  body: string[]; // 상세 해석 (문단)
-  basis: string[]; // 관련 사주 데이터 · 참고 근거 (예: "일간 乙木", "오행 목 3글자")
-  visual: ChapterVisual;
-  cautions: string[]; // 주의할 점
-  questions: string[]; // 생각해볼 질문
-  /** 필요한 정보가 없을 때 (예: 상대 정보 없는 궁합) */
-  availability: "ready" | "needs-partner" | "needs-birth-time" | "coming-soon";
-  access: "free" | "premium";
-};
-
-export type FortuneReport = {
-  id: string;
-  fortune: FortuneId;
-  title: string;
-  isSample: boolean;
-  calculation: CalculationSource;
-  interpretation: InterpretationSource;
-  chapters: ReportChapter[];
-  /** 공유 이미지에 넣을 수 있는 요약 (개인정보 없음) */
-  shareSummary: { title: string; lines: string[] };
-  createdAt: number;
-};
+/* 리포트 (PHASE 4) — features/report/types.ts 로 통합 */
+export type {
+  ConsultationContext,
+  Report,
+  ReportAccessState,
+  ReportChapter,
+  ReportInsight,
+  ReportMetadata,
+  ReportSection,
+} from "@/features/report/types";
+export type { ResultPayload } from "@/features/saju/types";
 
 /* ── ④ 판매 (테스트 UI 전용) ── */
 

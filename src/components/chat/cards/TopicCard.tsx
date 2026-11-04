@@ -13,12 +13,12 @@ export function TopicCard({ id }: { id: TopicId }) {
       badge={<SampleBadge>샘플 풀이</SampleBadge>}
       footnote={
         <span className="flex items-center justify-between gap-3">
-          <span>심층 리포트 · {t.reportChapter}</span>
+          <span>종합 리포트 · {t.reportChapter}</span>
           <Link
-            href="/report"
+            href={`/report/my/chapter/${t.reportChapterId}`}
             className="-my-2 inline-flex min-h-11 shrink-0 items-center font-semibold text-chat-user underline decoration-chat-user/40 underline-offset-4"
           >
-            미리보기
+            이어 읽기
           </Link>
         </span>
       }

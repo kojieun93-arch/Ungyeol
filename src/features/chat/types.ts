@@ -61,6 +61,8 @@ export type Consult = {
   /** 다른 주제로 바꿀지 묻는 중이면 그 주제, 그리고 '이어서'를 고르면 돌아갈 노드 */
   pendingTopic?: ConsultTopic | null;
   resumeNode?: NodeId | null;
+  /** 리포트에서 '운결에게 더 물어보기'로 들어온 맥락 (id 만) */
+  ask?: { reportId: string; chapterId: string; q: number | null } | null;
 };
 
 /** 결과 계산에 쓰이는 정보 — 이 값이 바뀌면 이전 결과 카드는 무효 */
@@ -114,6 +116,9 @@ export type NodeId =
   | "partnerMbti"
   | "editPick" // 고칠 항목 고르기
   | "switchTopic" // 다른 주제로 바꿀지 확인
+  // 리포트 → 채팅 질문 (PHASE 4)
+  | "askChapter" // 챕터 맥락의 질문 선택지
+  | "askAnswer" // 미리 작성된 설명
   | `topic-${TopicId}`;
 
 export type InputField = "nickname" | "birthdate" | "birthtime" | "mbti" | "partnerDate" | "partnerMbti";
@@ -133,6 +138,10 @@ export type ChoiceOption = {
   edit?: boolean;
   /** 주제 전환 확인 */
   switchTopic?: "accept" | "keep";
+  /** 리포트 질문 선택 (CHAPTER_ASKS 의 순번) */
+  askPick?: number;
+  /** 리포트 질문 전에 하던 상담으로 돌아가기 */
+  resumeConsult?: boolean;
   /** 다른 화면으로 이동하는 선택지 */
   href?: string;
   /** 대화를 처음부터 다시 */

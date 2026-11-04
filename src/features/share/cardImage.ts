@@ -66,8 +66,12 @@ export async function renderCardImage(node: HTMLElement, { pixelRatio = 3 }: { p
   return blob;
 }
 
-export function fileName(title: string) {
-  return `운결-${title.replace(/\s+/g, "")}.png`;
+/**
+ * 저장 파일 이름 — 영문 · 숫자만 (한글 파일 이름은 일부 브라우저에서 'download' 로 바뀌거나 깨짐)
+ * 예: ungyeol-manse.png
+ */
+export function fileName(slug: string) {
+  return `ungyeol-${slug.replace(/[^a-z0-9-]/gi, "").toLowerCase() || "card"}.png`;
 }
 
 export type ShareOutcome = "shared" | "cancelled";

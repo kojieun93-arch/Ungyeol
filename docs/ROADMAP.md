@@ -64,21 +64,25 @@ src/
 - 채팅: 확인 → 안내 → 사주 원국 → 오행 안내 → 오행 → 타고난 나 → 지금의 나 → 두 개의 나 → 종합 → 운세 8개 선택(지금 상담 주제가 맨 앞, 상담 주제는 유지)
 - 전체 화면: 이전·다음 · 닫기 · Esc(포커스 위치와 무관) · 브라우저 뒤로가기 · 포커스 가두기·복귀 · 끝 카드에서 포커스 유지 · 배경 inert + 문서 스크롤 잠금
 
-## PHASE 4 — 종합 리포트 12챕터
+## PHASE 4 — 12챕터 종합 리포트 (구현 완료)
 
-명세: `src/content/report-chapters.ts` · 타입: `ReportChapter`, `FortuneReport`
+라우트
+- `/report` 소개 · 12챕터 목차(전체 공개) · 샘플 리포트 / 내 상담 결과로 보기 · 판매 안 함 안내
+- `/report/sample` 공개 샘플 (데모 사주 + 예시 MBTI INFP) · `/report/my` 이 탭의 상담으로 만든 리포트 (상담 전이면 안내 화면)
+- `/report/[reportId]/chapter/[chapterId]` 같은 문서에서 그 챕터 위치로 (목차로 이동하면 주소도 바뀜)
 
-- 라우트 `/report/[fortune]` (종합 = `integrated`)
-- 화면 구성
-  - 상단 고정: 읽기 진행률 막대(스크롤 비율, `aria-valuenow`) · 목차 버튼
-  - 목차 시트: 12챕터, 잠김 표시(무료/심층), 지금 읽는 챕터 강조
-  - 챕터: 번호 · 제목 · 핵심 요약 · 상세 해석 · 근거(사주 데이터) · 표/시각 카드 · 주의할 점 · 생각해볼 질문 · 다음 챕터
-  - 심층 챕터는 요약까지만 보이고 “준비 중” (테스트 결제 UI는 PHASE 5)
-- 시각 카드: `ChapterVisual` 의 kind 별 컴포넌트 (`manse-table`·`element-radar`·`type-compare` 는 카드 6종 재사용)
-- 데이터가 없는 챕터는 꾸며 내지 않음: 대운·세운(10장)과 월별(11장)은 HRUM 연동 전까지 `coming-soon`
-- 긴 리포트의 스크롤: 챕터를 `content-visibility: auto` 로, 이미지 없음, 고정 요소 최소화
-- 채팅 복귀: 리포트로 갈 때 `ConsultationSession.resume.lastMessageId` 저장 → 돌아오면 그 메시지로 스크롤 (memory.ts 확장)
-- 컴포넌트: `report/ReadingProgress` · `report/ChapterToc` · `report/Chapter` · `report/ChapterNav` · `report/visuals/*`
+데이터 (콘텐츠 · 계산 · UI 분리)
+- 타입: `features/report/types.ts` — Report · ReportMetadata · ReportChapter · ReportSection · ReportInsight · ConsultationContext · ReportAccessState (+ ResultPayload)
+- 고정 정보: `content/report/chapters.ts` (제목 · 핵심 질문 · 담기는 내용 · 채팅 질문과 미리 쓴 설명)
+- 본문: `features/report/build.ts` — ResultPayload 에서 계산 (일간 · 오행 개수 · 십성 갈래 · MBTI 글자). 계산이 필요한데 없는 것은 `DataSlot` 미연결
+  - 10장 대운 · 세운: 읽는 법 · 방향 규칙만, 대운표는 빈 칸 8개(미연결)
+  - 11장: 2027 丁未년 · 월 간지(壬寅~癸丑, 달력 값)는 표시, 개인 해석은 미연결
+  - 06장: 상대 정보 없으면 '정보 필요', 상대 MBTI 있으면 글자 비교, 사주 비교는 미연결
+- 접근: `features/report/access.ts` — 공개 01 · 04, `demo-full` 은 화면 확인용 체험(결제 · 권한 아님, 메모리 전용)
+- 채팅 연결: `features/report/handoff.ts` — 물어보기 전 스크롤 위치 저장 → `/chat?report=&chapter=` → 채팅 `askChapter` · `askAnswer` 노드 → ‘리포트로 돌아가기’ 시 같은 위치
+- PDF: `features/report/export.ts` 인터페이스만 (available: false)
+
+UI: `components/report/reader/` — ReportReader(진행률 · 현재 챕터 · 목차 시트 · 위로 가기 · 카드 크게 보기) · Chapter(공개/잠김) · Visuals(원국표 · 십성 · 오행 · 규칙표 · 비교 카드 · 글자 비교 · 대운 빈 칸 · 월 간지)
 
 ## PHASE 5 — 운세별 전용 리포트
 

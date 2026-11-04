@@ -217,12 +217,17 @@ export function buildInsight(manse: ManseResult, p: SajuPersonality, c: SajuMBTI
  * - manse.isSample(데모 사주)이면 resultStatus 는 항상 "demo" — 실제 계산 전에는 "calculated" 로 바꾸지 않음
  * - 생년월일이 없으면 "unavailable"
  */
-export function buildResultPayload(manse: ManseResult, profile: Pick<ConsultationProfile, "mbti" | "birth">): ResultPayload {
+export function buildResultPayload(
+  manse: ManseResult,
+  profile: Pick<ConsultationProfile, "mbti" | "birth">,
+  opts: { publicSample?: boolean } = {},
+): ResultPayload {
   const mbti = profile.mbti;
   const sajuPersonality = buildPersonality(manse);
   const sajuMBTIReference = buildReference(manse);
   const comparison = buildComparison(sajuMBTIReference.type, mbti);
-  const resultStatus = !profile.birth ? "unavailable" : manse.isSample ? "demo" : "calculated";
+  // 공개 샘플 리포트는 사용자 입력이 없어도 데모로 보여 줌. 그 외에는 생년월일이 없으면 unavailable
+  const resultStatus = !profile.birth && !opts.publicSample ? "unavailable" : manse.isSample ? "demo" : "calculated";
   return {
     resultStatus,
     demo: manse.isSample ? DEMO_PROFILE : null,

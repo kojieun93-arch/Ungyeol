@@ -54,7 +54,10 @@ export type ChatAction =
       record?: ChoiceOption["record"];
       edit?: boolean;
       switchTopic?: ChoiceOption["switchTopic"];
+      askPick?: number;
+      resumeConsult?: boolean;
     }
+  | { type: "askChapter"; reportId: string; chapterId: string; at: number }
   | { type: "requestTopic"; topic: ConsultTopic; at: number }
   | { type: "restart" };
 
@@ -108,6 +111,21 @@ function flushAll(state: ChatState, at: number): ChatState {
     s = settle({ ...s, messages: [...s.messages, ...s.queue.map((p) => toMessage(p, at))], queue: [], typingId: null });
   }
   return s;
+}
+
+function blank(session: number, consult: Consult): ChatState {
+  return {
+    session,
+    seq: 0,
+    node: FIRST_NODE,
+    messages: [],
+    queue: [],
+    typingId: null,
+    prompt: null,
+    profile: {},
+    consult,
+    resultEpoch: 0,
+  };
 }
 
 export function initChat(session = 1, topic: ConsultTopic | null = null): ChatState {
@@ -164,6 +182,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         if (key === "concern") consult = { ...consult, answers: { concern: consult.answers.concern } };
       }
       if (action.edit) consult = { ...consult, editing: true };
+      if (action.askPick !== undefined && consult.ask) consult = { ...consult, ask: { ...consult.ask, q: action.askPick } };
 
       const withUser: ChatState = { ...state, seq: state.seq + 1, messages: [...state.messages, userMsg], profile, prompt: null, resultEpoch, consult };
 
@@ -172,11 +191,11 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         const switched: Consult = { ...newConsult(consult.pendingTopic), greeted: consult.greeted };
         return { ...withUser, ...enqueue(withUser, "greet", profile, switched) };
       }
-      if (action.switchTopic === "keep") {
+      if (action.switchTopic === "keep" || action.resumeConsult) {
         // 원래 노드의 대사는 다시 말하지 않고 (결과 카드 재생 방지) 한마디 뒤 그 노드의 질문으로 복귀
         const back = consult.resumeNode ?? "confirm";
-        const kept: Consult = { ...consult, pendingTopic: null, resumeNode: null };
-        const line: Pending = { id: `${state.session}-${withUser.seq + 1}`, kind: "text", text: "좋아요. 하던 이야기를 이어서 할게요.", lead: true };
+        const kept: Consult = { ...consult, pendingTopic: null, resumeNode: null, ask: action.resumeConsult ? null : consult.ask };
+        const line: Pending = { id: `${state.session}-${withUser.seq + 1}`, kind: "text", text: action.resumeConsult ? "좋아요. 하던 상담을 이어서 할게요." : "좋아요. 하던 이야기를 이어서 할게요.", lead: true };
         return { ...withUser, seq: withUser.seq + 1, node: back, queue: [line], consult: kept };
       }
 
@@ -195,6 +214,24 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       const resumeNode = s.node === "switchTopic" ? (s.consult.resumeNode ?? null) : s.node;
       const consult: Consult = { ...s.consult, pendingTopic: action.topic, resumeNode };
       return { ...s, ...enqueue(s, "switchTopic", s.profile, consult) };
+    }
+
+    case "askChapter": {
+      // 리포트에서 '운결에게 더 물어보기' — 같은 챕터 질문 중이면 그대로
+      const c = state.consult;
+      const same = c.ask?.reportId === action.reportId && c.ask?.chapterId === action.chapterId;
+      if (same && (state.node === "askChapter" || state.node === "askAnswer")) return state;
+      const ask = { reportId: action.reportId, chapterId: action.chapterId, q: null };
+      const answered = state.messages.some((m) => m.from === "user");
+      if (!answered) {
+        // 아직 상담 전: 질문부터 (상담은 이어서 시작할 수 있음)
+        const b = blank(state.session + 1, { ...newConsult(null), ask });
+        return { ...b, ...enqueue(b, "askChapter", {}, b.consult) };
+      }
+      const s = flushAll(state, action.at);
+      const resumeNode = s.node === "askChapter" || s.node === "askAnswer" || s.node === "switchTopic" ? (s.consult.resumeNode ?? null) : s.node;
+      const consult: Consult = { ...s.consult, ask, resumeNode };
+      return { ...s, ...enqueue(s, "askChapter", s.profile, consult) };
     }
 
     case "flush":
