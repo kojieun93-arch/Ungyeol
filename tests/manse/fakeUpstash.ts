@@ -5,7 +5,7 @@ export const UP_URL = "https://ungyeol-test.upstash.io";
 export const UP_TOKEN = "upstash-test-token-ABCDEFGHIJKLMNOP";
 
 export function fakeUpstash() {
-  const kv = new Map<string, { v: number; exp: number }>();
+  const kv = new Map<string, { v: number; exp: number; s?: string }>();
   const st = { down: false, bad: false, calls: 0, unauthorized: 0 };
   const now = () => Date.now();
   const get = (k: string) => {
@@ -31,17 +31,24 @@ export function fakeUpstash() {
       kv.set(key, { v, exp });
       return out([1, v, 0]);
     }
+    if (c === "EVAL" && a[1].includes("DEL")) {
+      const e = get(a[3]);
+      if (e && e.s === a[4]) return kv.delete(a[3]), out(1);
+      return out(0);
+    }
     if (c === "EVAL") {
       const e = get(a[3]);
       if (e && e.v > 0) e.v--;
       return out(1);
     }
-    if (c === "GET") return out(get(a[1]) ? String(get(a[1])!.v) : null);
+    if (c === "GET") { const e = get(a[1]); return out(e ? (e.s ?? String(e.v)) : null); }
     if (c === "SET") {
+      if (a[3] !== "NX" || a[4] !== "PX") return new Response(JSON.stringify({ error: "unexpected SET form" }), { status: 400 });
       if (get(a[1])) return out(null);
-      kv.set(a[1], { v: 1, exp: now() + Number(a[5]) });
+      kv.set(a[1], { v: 1, s: a[2], exp: now() + Number(a[5]) });
       return out("OK");
     }
+    if (c === "TTL") { const e = get(a[1]); return out(e ? Math.max(0, Math.ceil((e.exp - now()) / 1000)) : -2); }
     if (c === "DEL") return out(kv.delete(a[1]) ? 1 : 0);
     return new Response(JSON.stringify({ error: "unknown command" }), { status: 400 });
   }) as typeof fetch;

@@ -1,4 +1,4 @@
-# 만세력 연결 (PHASE 6-5 — 공개 전 마지막 보안 · 정확도 점검)
+# 만세력 연결 (PHASE 6-6 — 보안 설정 연결 점검 · 공개 경로 리허설)
 
 > 현재 화면: **샘플 사주(운결 데모 사주, 일간 乙木)** 그대로예요.
 > 사용자 화면이 실제 계산을 쓰는 조건 (모두 만족해야 함)
@@ -91,10 +91,10 @@ calculated 가 아닌 이유는 `verification.reasons` 에 코드로 나와요: 
 | 1 | Origin 필수 · 같은 호스트 · `Sec-Fetch-Site: same-origin` | 다른 사이트 · curl 기본 호출 | 403 `FORBIDDEN_ORIGIN` |
 | 2 | `Content-Type: application/json` | 단순 폼 위조(CSRF) | 415 |
 | 3 | 서명 쿠키 (HMAC-SHA256, 30분, IP 해시 묶음, HttpOnly · Secure · SameSite=Strict · Path=/api/manse) | 화면을 거치지 않은 직접 호출 · 쿠키 재사용 · 변조 | 403 `TICKET_REQUIRED` |
-| 4 | IP당 분당 3 · IP당 하루 `MANSE_IP_DAILY_LIMIT` (공유 저장소) | 반복 호출 | 429 `RATE_LIMITED` · `DAILY_LIMIT` |
-| 5 | 입력 검증 | 잘못된 입력으로 크레딧 낭비 | 400 · 422 |
-| 6 | 봇 확인 Cloudflare Turnstile (선택, 키 넣으면 켜짐) | 자동화 브라우저 · 봇 | 403 `BOT_CHECK_FAILED` |
-| 7 | IP당 동시 1건 잠금 (15초) | 같은 사용자의 동시 폭주 | 429 `CONCURRENT` |
+| 4 | 입력 검증 | 잘못된 입력으로 크레딧 낭비 | 400 · 422 |
+| 5 | 봇 확인 Cloudflare Turnstile — `success` · `hostname` = 이 사이트 · `action` = `manse` 모두 맞아야 통과. **Redis 를 쓰기 전에** 확인 (봇 요청이 저장소 사용량 · 사용자 IP 한도를 쓰지 못하게) | 자동화 브라우저 · 봇 · 다른 사이트 토큰 재사용 | 403 `BOT_CHECK_FAILED` (+ reason) |
+| 6 | IP당 분당 3 · IP당 하루 `MANSE_IP_DAILY_LIMIT` (공유 저장소) | 반복 호출 | 429 `RATE_LIMITED` · `DAILY_LIMIT` |
+| 7 | IP당 동시 1건 잠금 (15초, 잠근 요청만 풀 수 있음) | 같은 사용자의 동시 폭주 | 429 `CONCURRENT` |
 | 8 | 같은 입력 진행 중 공유 · 10분 캐시 | 같은 계산 중복 과금 | — |
 | 9 | 전체 동시 HRUM 호출 `MANSE_MAX_CONCURRENT`(2) | 동시 폭주 | 503 `RATE_LIMITED` |
 | 10 | **하루 전체 예산** `MANSE_DAILY_BUDGET`(18) — 공개는 `− MANSE_OPERATOR_RESERVE`(3) = 15 까지 | 총 비용 상한 | 503 `BUDGET_EXCEEDED` |
@@ -110,8 +110,14 @@ calculated 가 아닌 이유는 `verification.reasons` 에 코드로 나와요: 
 - 최대 비용: 하루 18건 × ₩50 = **₩900**. HRUM 콘솔 하루 20회 제한이 그 위의 최종 안전장치
 - IP 는 비밀값을 섞은 해시로만 키에 씀 (원래 IP 미저장). 로그는 `[manse] 코드` 만
 
-### 운영자 확인
-- `/check/manse` → '공유 사용량 저장소 확인' (`GET /api/manse?probe=store` + 확인 토큰). HRUM 호출 없음. `shared: true` · 쓰기/읽기 true · 오늘 사용량 · 공개 전 남은 설정이 보여요
+### 운영자 확인 (모두 확인 토큰 필요 · HRUM 호출 없음 · 과금 없음)
+| 화면 (/check/manse) | 주소 | 확인하는 것 |
+|---|---|---|
+| 공유 사용량 저장소 확인 | `GET /api/manse?probe=store` | 실제 Upstash 에서 증가 · 한도 거절(Lua) · 환불 · 만료(TTL) · 동시 잠금 · 남의 잠금 보호 · 해제 · 오늘 예산 키 만료 — 7개 모두 ✓ 이어야 함 |
+| 공개 경로 리허설 | `GET ?probe=ticket` → `POST ?rehearsal=1` ×3 | ① 정상: Turnstile 위젯 토큰 → 서버 siteverify → 서명 쿠키 → 공유 저장소 → IP 한도 · 잠금 → 하루 예산 예약 → **HRUM 직전에서 멈추고 환불** (6단계 모두 ✓) · ② Turnstile 토큰 없이 → 봇 확인에서 거절 · ③ 쿠키 없이 → 화면 요청 확인에서 거절 |
+- 리허설은 실제 공개 요청과 **같은 함수**(screenGate · readInput · botGate · ipGate · upstreamGuard)를 쓰고, IP 한도 · 잠금 키만 `rh:` 로 따로 써서 실제 사용자 한도에 영향이 없어요
+- 위젯 실패는 Cloudflare 오류 코드로 보여요 (예: `110200` = 위젯에 이 도메인이 등록되지 않음 · `SCRIPT` = 스크립트를 못 받음 · `TIMEOUT`)
+- 서버 검증 실패 이유: `NO_TOKEN` · `REJECTED`(+ Cloudflare `error-codes`, 예 `invalid-input-secret` = 비밀 키 틀림) · `HOSTNAME_MISMATCH` · `ACTION_MISMATCH` · `NETWORK`
 
 ## 근거 문서 (2026-11-05 확인)
 - 공식 문서 https://hrum.ai/docs.html (만세력 API 절) · 시작 가이드 https://hrum.ai/getting-started.html
@@ -179,7 +185,8 @@ HRUM 이 직접 처리 (공식 문서): 절기 기준 원국 · 한국 서머타
 2. **서명 비밀값**: `MANSE_SIGNING_SECRET` (32자 이상 임의 문자열, 비밀번호 관리자로 생성) 등록
 3. (권장) **봇 확인**: Cloudflare Turnstile 위젯 생성(도메인 ungyeol-nine.vercel.app, 모드 Invisible/Managed) → `TURNSTILE_SITE_KEY` · `TURNSTILE_SECRET_KEY`
 4. 예산 확인: `MANSE_DAILY_BUDGET` 은 HRUM 콘솔 하루 한도(20)보다 작게 (기본 18) · `MANSE_UPSTREAM_PER_SECOND=1`
-5. 재배포 → `/check/manse` 에서 '저장소 확인' → `shared: true`, 쓰기/읽기 true, 오늘 사용량 숫자가 보이는지
+5. 재배포 → `/check/manse` 에서 '저장소 확인' → `shared: true`, 명령 점검 7개 모두 ✓
+5-1. 같은 화면 '공개 경로 리허설' → 서명 쿠키 발급 됨 · 위젯 토큰 받음 · ①②③ 모두 ✅ (HRUM 호출 없음)
 6. (선택) e7 1건 실행 → 시 경계 규칙 확인 (₩50)
 7. `HRUM_MAPPING_VERIFIED=true` 등록 → 재배포. **이때도 사용자 화면은 샘플** (`publicBlockers: ["MANSE_PUBLIC_ENABLED"]` 만 남아야 함)
 8. `/check/manse` 1단계 1건 다시 → `status: "calculated"`, `reasons: []` 확인

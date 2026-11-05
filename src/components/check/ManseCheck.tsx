@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { LogoMark } from "@/components/reading/Frame";
 import { Sheet } from "@/components/report/common";
+import { getBotToken } from "@/features/saju/live";
 import CHECK from "@/content/manse-check-cases.json";
 
 /* ──────────────────────────────────────────────────────────
@@ -84,6 +85,11 @@ function analyze(c: Case, http: number, data: Api | null): Result {
   return { id: c.id, http, ok: http === 200, formatOk, pillars, match, allMatch, extraOk, data, note };
 }
 
+type RehearsalRun = { http: number; allOk?: boolean; stoppedAt?: string | null; hrumCalled?: boolean; steps?: { id: string; ok: boolean; detail?: unknown }[]; error?: { code: string } };
+type Rehearsal = { ticket: { http: number; issued: boolean; siteKey: boolean; error: string | null } | null; widget: { token: boolean; error: string | null } | null; normal: RehearsalRun | null; noBot: RehearsalRun | null; noCookie: RehearsalRun | null };
+const STEP_LABEL: Record<string, string> = { screen: "화면 요청 확인 (Origin · 서명 쿠키)", sharedStore: "공유 저장소", input: "입력 검증", botCheck: "봇 확인 (Turnstile 서버 검증)", ipLimits: "IP 한도 · 동시 1건", budget: "하루 예산 예약 → 환불" };
+const detailText = (d: unknown) => (d === undefined ? "" : typeof d === "string" ? d : JSON.stringify(d));
+
 const cases = CHECK.cases as Case[];
 const extra = CHECK.extra as Case[];
 
@@ -96,6 +102,37 @@ export function ManseCheck() {
   const [counts, setCounts] = useState({ sent: 0, upstream: 0, krw: 0 });
   const [copied, setCopied] = useState<string | null>(null);
   const [probe, setProbe] = useState<Record<string, unknown> | null>(null);
+  const [rehearsal, setRehearsal] = useState<Rehearsal | null>(null);
+
+  // 공개 경로 리허설 — 실제 Turnstile · 서명 쿠키 · 공유 저장소로 공개 요청 단계를 돌리고 HRUM 직전에서 멈춤 (과금 없음)
+  const runRehearsal = async () => {
+    if (busy) return;
+    setBusy(true);
+    const tk = token.trim();
+    const out: Rehearsal = { ticket: null, widget: null, normal: null, noBot: null, noCookie: null };
+    try {
+      const t = await fetch("/api/manse?probe=ticket", { cache: "no-store", credentials: "same-origin", headers: { "X-Manse-Check-Token": tk } });
+      const tj = (await t.json().catch(() => ({}))) as { ticketIssued?: boolean; turnstileSiteKey?: string | null; error?: { code: string } };
+      out.ticket = { http: t.status, issued: tj.ticketIssued === true, siteKey: !!tj.turnstileSiteKey, error: tj.error?.code ?? null };
+      const post = async (botToken: string | null, credentials: RequestCredentials) => {
+        const h: Record<string, string> = { "Content-Type": "application/json", "X-Manse-Check-Token": tk };
+        if (botToken) h["X-Turnstile-Token"] = botToken;
+        const r = await fetch("/api/manse?rehearsal=1", { method: "POST", cache: "no-store", credentials, headers: h, body: JSON.stringify(cases[0].body) });
+        return { http: r.status, ...((await r.json().catch(() => ({}))) as Record<string, unknown>) } as RehearsalRun;
+      };
+      if (tj.turnstileSiteKey) {
+        const w = await getBotToken(tj.turnstileSiteKey);
+        out.widget = { token: !!w.token, error: w.error };
+        out.normal = await post(w.token, "same-origin");
+        out.noBot = await post(null, "same-origin");
+      } else out.normal = await post(null, "same-origin");
+      out.noCookie = await post(null, "omit");
+    } catch {
+      /* 화면에 비어 있는 칸으로 보임 */
+    }
+    setRehearsal(out);
+    setBusy(false);
+  };
 
   // 공유 저장소 확인 — HRUM 을 부르지 않음 (과금 없음)
   const runProbe = async () => {
@@ -175,7 +212,8 @@ export function ManseCheck() {
       at: new Date().toISOString().slice(0, 16),
       host: typeof window !== "undefined" ? window.location.host : "",
       server: server ? { configured: server.configured, mappingVerified: server.mappingVerified, screen: server.screen, protection: server.protection, publicBlockers: server.publicBlockers } : null,
-      store: probe ? { http: probe.http, shared: probe.shared, writeRead: probe.writeRead, budget: probe.budget, botCheck: probe.botCheck } : null,
+      rehearsal: rehearsal ? { ticket: rehearsal.ticket, widget: rehearsal.widget, normal: rehearsal.normal && { allOk: rehearsal.normal.allOk, stoppedAt: rehearsal.normal.stoppedAt, steps: rehearsal.normal.steps }, noBot: rehearsal.noBot && { stoppedAt: rehearsal.noBot.stoppedAt }, noCookie: rehearsal.noCookie && { stoppedAt: rehearsal.noCookie.stoppedAt } } : null,
+      store: probe ? { http: probe.http, shared: probe.shared, allOk: probe.allOk, checks: probe.checks, budget: probe.budget, botCheck: probe.botCheck } : null,
       counts,
       stopped,
       results: [...cases, ...extra].filter((c) => results[c.id]).map((c) => {
@@ -277,9 +315,9 @@ export function ManseCheck() {
               {[
                 ["shared", String(probe.shared ?? false)],
                 ["store", String(probe.store ?? "—")],
-                ["쓰기 · 읽기", String(probe.writeRead ?? false)],
+                ["명령 점검", probe.checks ? `${probe.allOk ? "모두 통과" : "실패 있음"} · ${Object.entries(probe.checks as Record<string, boolean>).map(([a, b]) => `${({ countAndLimit: "증가·한도", refund: "환불", expiry: "만료", lockOnce: "동시 잠금", lockOwnerOnly: "남의 잠금 보호", unlock: "잠금 해제", budgetExpiry: "예산 키 만료" } as Record<string, string>)[a] ?? a} ${b ? "✓" : "✗"}`).join(" · ")}` : String(probe.writeRead ?? false)],
                 ["응답 시간", probe.latencyMs !== undefined ? `${probe.latencyMs}ms` : "—"],
-                ["오늘 HRUM 호출", probe.budget ? `${(probe.budget as any).used} / ${(probe.budget as any).limit} (공개 ${(probe.budget as any).publicLimit}, 운영자 몫 ${(probe.budget as any).operatorReserve})` : "—"],
+                ["오늘 HRUM 호출", probe.budget ? `${(probe.budget as any).used} / ${(probe.budget as any).limit} (공개 ${(probe.budget as any).publicLimit}, 운영자 몫 ${(probe.budget as any).operatorReserve}${(probe.budget as any).ttlSec > 0 ? `, ${Math.round((probe.budget as any).ttlSec / 3600)}시간 뒤 초기화` : ""})` : "—"],
                 ["봇 확인", String(probe.botCheck ?? "—")],
                 ["공개 전 남은 설정", Array.isArray(probe.publicBlockers) ? (probe.publicBlockers as string[]).join(", ") || "없음" : "—"],
               ].map(([k, v]) => (
@@ -289,6 +327,45 @@ export function ManseCheck() {
                 </div>
               ))}
             </dl>
+          )}
+        </Sheet>
+
+        <Sheet className="mt-8 px-4 pt-7 pb-5">
+          <h2 className="font-serif text-[17px] font-semibold text-[#4a1a2c]">공개 경로 리허설</h2>
+          <p className="mt-1 text-[14px] leading-[1.55] text-[#6b5459] [word-break:keep-all]">
+            사용자 화면이 실제로 보낼 요청을 그대로 흉내 내요. Turnstile 브라우저 인증 → 서버 검증 → 서명 쿠키 → 공유 저장소 한도 → 하루 예산 예약까지 진행하고, HRUM 을 부르기 직전에 멈춰 예산을 되돌려요 (과금 없음). 토큰 없이 · 쿠키 없이 보낸 요청이 거절되는지도 같이 봐요.
+          </p>
+          <button type="button" onClick={runRehearsal} disabled={busy || token.trim().length < 24 || !server?.configured} className="mt-3 min-h-12 w-full rounded-full text-[15px] font-medium text-[#6e2a40] shadow-[inset_0_0_0_1.5px_#c9a27a] disabled:opacity-40" data-rehearsal>
+            {busy && !rehearsal ? "확인 중…" : "리허설 실행 (HRUM 호출 없음)"}
+          </button>
+          {rehearsal && (
+            <div className="mt-3 space-y-3 text-[14px]" data-rehearsal-result>
+              <p className="[word-break:keep-all]">
+                서명 쿠키 발급: <b>{rehearsal.ticket?.issued ? "됨" : `안 됨 (${rehearsal.ticket?.error ?? rehearsal.ticket?.http ?? "—"})`}</b>
+                {" · "}봇 확인 위젯: <b>{rehearsal.widget ? (rehearsal.widget.token ? "토큰 받음" : `실패 (${rehearsal.widget.error})`) : rehearsal.ticket?.siteKey === false ? "꺼져 있음" : "—"}</b>
+              </p>
+              {([
+                ["normal", "① 정상 요청 — 모두 통과해야 정상", rehearsal.normal, (r: RehearsalRun) => r.allOk === true],
+                ["noBot", "② Turnstile 토큰 없이 — 봇 확인에서 거절돼야 정상", rehearsal.noBot, (r: RehearsalRun) => r.stoppedAt === "botCheck"],
+                ["noCookie", "③ 서명 쿠키 없이 — 화면 요청 확인에서 거절돼야 정상", rehearsal.noCookie, (r: RehearsalRun) => r.stoppedAt === "screen"],
+              ] as const).map(([id, title, r, pass]) =>
+                r ? (
+                  <div key={id} className="rounded-xl bg-white/60 px-3.5 py-3 shadow-[0_0_0_1px_#e6cdbd]" data-run={id}>
+                    <p className="font-semibold text-[#3a2229] [word-break:keep-all]">
+                      {pass(r) ? "✅" : "❌"} {title}
+                    </p>
+                    <p className="mt-0.5 text-[13px] text-[#7b6266]">HTTP {r.http} · HRUM 호출 {r.hrumCalled === false ? "없음" : "?"}{r.error ? ` · ${r.error.code}` : ""}</p>
+                    <ul className="mt-1.5 space-y-1">
+                      {(r.steps ?? []).map((st) => (
+                        <li key={st.id} className="text-[13px] leading-[1.5] break-all">
+                          {st.ok ? "✓" : "✗"} {STEP_LABEL[st.id] ?? st.id} <span className="text-[#7b6266]">{detailText(st.detail)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null,
+              )}
+            </div>
           )}
         </Sheet>
 

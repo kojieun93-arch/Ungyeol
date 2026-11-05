@@ -93,29 +93,40 @@ function loadTurnstile(): Promise<TurnstileApi | null> {
     });
   return tsScript;
 }
-async function botToken(siteKey: string): Promise<string | null> {
-  if (typeof window === "undefined") return null;
+/** 보이지 않는 Turnstile 위젯으로 토큰 받기. error 는 Cloudflare 위젯 오류 코드(예: 110200 = 도메인 미등록) 또는 SCRIPT · TIMEOUT */
+export async function getBotToken(siteKey: string, timeoutMs = 10_000): Promise<{ token: string | null; error: string | null }> {
+  if (typeof window === "undefined") return { token: null, error: "NO_WINDOW" };
   const api = await loadTurnstile();
-  if (!api) return null;
+  if (!api) return { token: null, error: "SCRIPT" };
   return new Promise((resolve) => {
     const el = document.createElement("div");
     el.setAttribute("data-bot-check", "");
     el.style.cssText = "position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:60";
     document.body.appendChild(el);
     let id = "";
-    const done = (t: string | null) => {
+    const done = (token: string | null, error: string | null) => {
       clearTimeout(timer);
       try {
         if (id) api.remove(id);
       } catch {}
       el.remove();
-      resolve(t);
+      resolve({ token, error });
     };
-    const timer = setTimeout(() => done(null), 10_000);
+    const timer = setTimeout(() => done(null, "TIMEOUT"), timeoutMs);
     try {
-      id = api.render(el, { sitekey: siteKey, action: "manse", appearance: "interaction-only", callback: (t: string) => done(t), "error-callback": () => done(null), "expired-callback": () => done(null) });
+      id = api.render(el, {
+        sitekey: siteKey,
+        action: "manse",
+        appearance: "interaction-only",
+        callback: (t: string) => done(t, null),
+        "error-callback": (code?: unknown) => {
+          done(null, String(code ?? "ERROR"));
+          return true; // 위젯 기본 재시도 대신 운결이 처리
+        },
+        "expired-callback": () => done(null, "EXPIRED"),
+      });
     } catch {
-      done(null);
+      done(null, "RENDER");
     }
   });
 }
@@ -173,7 +184,7 @@ export async function requestLive(p: Profile, fetchImpl: typeof fetch = fetch): 
   const post = async () => {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (botSiteKey) {
-      const t = await botToken(botSiteKey);
+      const t = (await getBotToken(botSiteKey)).token;
       if (t) headers["X-Turnstile-Token"] = t;
     }
     // 같은 출처 요청이라 서명 쿠키(HttpOnly)가 함께 감 — 스크립트는 쿠키 값을 모름

@@ -21,16 +21,21 @@ export interface LimitStore {
   give(key: string): Promise<void>;
   /** 지금 값 (없으면 0) */
   peek(key: string): Promise<number>;
-  /** 잠금: 비어 있으면 잡고 true (ttl 뒤 자동 해제) */
-  lock(key: string, ttlMs: number): Promise<boolean>;
-  unlock(key: string): Promise<void>;
+  /** 잠금: 비어 있으면 잡고 잠금 표(무작위 값)를 돌려줌, 이미 있으면 null (ttl 뒤 자동 해제) */
+  lock(key: string, ttlMs: number): Promise<string | null>;
+  /** 내가 잡은 잠금일 때만 풂 (만료 뒤 다른 요청이 잡은 잠금은 건드리지 않음) */
+  unlock(key: string, owner: string): Promise<void>;
+  /** 남은 수명(초): 없으면 -2, 만료가 없으면 -1 — 예산 키가 자정에 사라지는지 확인용 */
+  ttl(key: string): Promise<number>;
 }
 
 export class StoreError extends Error {}
 
+const ownerId = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+
 // ── 메모리 (개발 · 시험 · 공개 전 확인 토큰 요청)
 export function memoryStore(now: () => number = Date.now): LimitStore {
-  const m = new Map<string, { v: number; exp: number }>();
+  const m = new Map<string, { v: number; exp: number; owner?: string }>();
   const get = (k: string) => {
     const e = m.get(k);
     if (e && e.exp <= now()) m.delete(k);
@@ -54,12 +59,17 @@ export function memoryStore(now: () => number = Date.now): LimitStore {
       return get(key)?.v ?? 0;
     },
     async lock(key, ttlMs) {
-      if (get(key)) return false;
-      m.set(key, { v: 1, exp: now() + ttlMs });
-      return true;
+      if (get(key)) return null;
+      const id = ownerId();
+      m.set(key, { v: 1, exp: now() + ttlMs, owner: id });
+      return id;
     },
-    async unlock(key) {
-      m.delete(key);
+    async unlock(key, owner) {
+      if (get(key)?.owner === owner) m.delete(key);
+    },
+    async ttl(key) {
+      const e = get(key);
+      return e ? Math.max(0, Math.ceil((e.exp - now()) / 1000)) : -2;
     },
   };
 }
@@ -67,6 +77,7 @@ export function memoryStore(now: () => number = Date.now): LimitStore {
 // ── Upstash Redis REST
 const TAKE = "local v=redis.call('INCR',KEYS[1]) if v==1 then redis.call('EXPIRE',KEYS[1],tonumber(ARGV[2])) end if v>tonumber(ARGV[1]) then redis.call('DECR',KEYS[1]) local t=redis.call('TTL',KEYS[1]) return {0,v-1,t} end return {1,v,0}";
 const GIVE = "local v=tonumber(redis.call('GET',KEYS[1]) or '0') if v>0 then redis.call('DECR',KEYS[1]) end return 1";
+const UNLOCK = "if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end return 0";
 
 export function resolveUpstash(env: Record<string, string | undefined>): { url: string; token: string } | null {
   const url = (env.UPSTASH_REDIS_REST_URL ?? env.KV_REST_API_URL ?? "").trim();
@@ -112,10 +123,16 @@ export function upstashStore(cfg: { url: string; token: string }, fetchImpl: typ
       return r === null || r === undefined ? 0 : Number(r) || 0;
     },
     async lock(key, ttlMs) {
-      return (await cmd(["SET", key, "1", "NX", "PX", ttlMs])) === "OK";
+      const id = ownerId();
+      return (await cmd(["SET", key, id, "NX", "PX", ttlMs])) === "OK" ? id : null;
     },
-    async unlock(key) {
-      await cmd(["DEL", key]);
+    async unlock(key, owner) {
+      await cmd(["EVAL", UNLOCK, 1, key, owner]);
+    },
+    async ttl(key) {
+      const r = Number(await cmd(["TTL", key]));
+      if (!Number.isFinite(r)) throw new StoreError("STORE_ERROR");
+      return r;
     },
   };
 }

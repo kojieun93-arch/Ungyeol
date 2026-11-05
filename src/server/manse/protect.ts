@@ -47,20 +47,45 @@ export function checkTicket(req: Request, secret: string, iph: string, now = Dat
   return "ok";
 }
 
-/** Turnstile 확인 — 성공 · 같은 action 일 때만 true. 네트워크 오류 · 시간 초과면 false (fail-closed) */
-export async function verifyTurnstile(token: string | null, secretKey: string, ip: string, fetchImpl: typeof fetch = fetch, timeoutMs = 3000): Promise<boolean> {
-  if (!token || token.length > 2048) return false;
+export type BotCheck = {
+  ok: boolean;
+  /** NO_TOKEN · NETWORK · REJECTED · HOSTNAME_MISMATCH · ACTION_MISMATCH */
+  reason: string | null;
+  /** Cloudflare 가 돌려준 오류 코드 (예: invalid-input-response, timeout-or-duplicate) — 운영 확인용 */
+  errorCodes: string[];
+  hostnameOk: boolean | null;
+  actionOk: boolean | null;
+};
+
+/**
+ * Turnstile 확인 — 아래를 모두 만족해야 ok (네트워크 오류 · 시간 초과면 거절, fail-closed)
+ *  success === true · action === "manse"(화면에서 지정) · hostname === 이 요청의 호스트(다른 사이트에서 받은 토큰 재사용 차단)
+ */
+export async function verifyTurnstile(token: string | null, secretKey: string, ip: string, expectedHost: string | null, fetchImpl: typeof fetch = fetch, timeoutMs = 3000): Promise<BotCheck> {
+  const no = (reason: string, extra: Partial<BotCheck> = {}): BotCheck => ({ ok: false, reason, errorCodes: [], hostnameOk: null, actionOk: null, ...extra });
+  if (!token || token.length > 2048) return no("NO_TOKEN");
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const body = new URLSearchParams({ secret: secretKey, response: token });
     if (ip !== "unknown") body.set("remoteip", ip);
     const res = await fetchImpl("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body, signal: ctrl.signal, cache: "no-store" });
-    const j = (await res.json().catch(() => null)) as { success?: unknown; action?: unknown } | null;
-    return res.ok && j?.success === true && (j.action === undefined || j.action === "manse");
+    const j = (await res.json().catch(() => null)) as { success?: unknown; action?: unknown; hostname?: unknown; "error-codes"?: unknown } | null;
+    if (!res.ok || !j) return no("NETWORK");
+    const errorCodes = Array.isArray(j["error-codes"]) ? (j["error-codes"] as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 5) : [];
+    if (j.success !== true) return no("REJECTED", { errorCodes });
+    const want = expectedHost ? expectedHost.split(":")[0].toLowerCase() : null;
+    const hostnameOk = !want || (typeof j.hostname === "string" && j.hostname.toLowerCase() === want);
+    const actionOk = j.action === "manse";
+    if (!hostnameOk) return no("HOSTNAME_MISMATCH", { errorCodes, hostnameOk, actionOk });
+    if (!actionOk) return no("ACTION_MISMATCH", { errorCodes, hostnameOk, actionOk });
+    return { ok: true, reason: null, errorCodes, hostnameOk, actionOk };
   } catch {
-    return false;
+    return no("NETWORK");
   } finally {
     clearTimeout(timer);
   }
 }
+
+/** 이 요청의 호스트 (Vercel 은 x-forwarded-host 를 채움) */
+export const requestHost = (req: Request) => req.headers.get("x-forwarded-host") ?? req.headers.get("host");
